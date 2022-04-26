@@ -28,7 +28,7 @@ import struct
 
 from scapy import all as scapy_all
 
-import utils
+import scapy_cip_enip_common.utils as utils
 
 # Keep-alive sequences
 ENIP_UDP_KEEPALIVE = (

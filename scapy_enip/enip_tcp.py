@@ -24,7 +24,7 @@ import struct
 
 from scapy import all as scapy_all
 
-import utils
+import scapy_cip_enip_common.utils as utils
 
 
 class ENIP_ConnectionAddress(scapy_all.Packet):
