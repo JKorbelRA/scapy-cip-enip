@@ -30,25 +30,27 @@ https://code.wireshark.org/review/gitweb?p=wireshark.git;a=blob;f=epan/dissector
 import struct
 import sys
 
-from scapy import all as scapy_all
+from scapy.all import Packet, StrField, LEShortField, StrLenField, FieldListField, ByteField, \
+    XByteField, ByteEnumField, BitEnumField, PacketListField, conf, BitField, LEIntField, \
+    PacketField, X3BytesField, PacketLenField, bind_layers
 
 import scapy_enip.enip_tcp as enip_tcp
 import scapy_cip_enip_common.utils as utils
 
 
-class CIP_RespSingleAttribute(scapy_all.Packet):
+class CIP_RespSingleAttribute(Packet):
     """An attribute... not much information about it"""
-    fields_desc = [scapy_all.StrField("value", None)]
+    fields_desc = [StrField("value", None)]
 
 
-class CIP_RespAttributesAll(scapy_all.Packet):
+class CIP_RespAttributesAll(Packet):
     """Content of Get_Attribute_All response"""
     fields_desc = [
-        scapy_all.StrField("value", None),
+        StrField("value", None),
     ]
 
 
-class CIP_RespAttributesList(scapy_all.Packet):
+class CIP_RespAttributesList(Packet):
     """List of attributes in Get_Attribute_List responses
 
     There are "count" attributes in the "content" field, in the following format:
@@ -57,8 +59,8 @@ class CIP_RespAttributesList(scapy_all.Packet):
         * value, type and length depends on the attribute and thus can not be known here
     """
     fields_desc = [
-        scapy_all.LEShortField("count", 0),
-        scapy_all.StrField("content", ""),
+        LEShortField("count", 0),
+        StrField("content", ""),
     ]
 
     def split_guess(self, attr_list, verbose=False):
@@ -116,28 +118,28 @@ class CIP_RespAttributesList(scapy_all.Packet):
         return dict(result)
 
 
-class CIP_ReqGetAttributeList(scapy_all.Packet):
+class CIP_ReqGetAttributeList(Packet):
     """The list of requested attributes in a CIP Get_Attribute_List request"""
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="attrs"),
-        scapy_all.FieldListField("attrs", [], scapy_all.LEShortField("", 0),
+        FieldListField("attrs", [], LEShortField("", 0),
                                  count_from=lambda pkt: pkt.count),
     ]
 
 
-class CIP_ReqReadOtherTag(scapy_all.Packet):
+class CIP_ReqReadOtherTag(Packet):
     """Optional information to be sent with a Read_Tag_Service
 
     FIXME: this packet has been built from experiments, not from official doc
     """
     fields_desc = [
-        scapy_all.LEShortField("start", 0),
-        scapy_all.LEShortField("zero", 0),
-        scapy_all.LEShortField("length", None),
+        LEShortField("start", 0),
+        LEShortField("zero", 0),
+        LEShortField("length", None),
     ]
 
 
-class CIP_PathField(scapy_all.StrLenField):
+class CIP_PathField(StrLenField):
     SEGMENT_TYPES = {
         0: "class",  # 0x20 = 8-bit class ID, 0x21 = 16-bit class ID
         1: "instance",  # 0x24 = 8-bit instance ID, 0x25 = 16-bit instance ID
@@ -206,10 +208,10 @@ class CIP_PathField(scapy_all.StrLenField):
         return cls.tuplelist2repr(cls.to_tuplelist(val))
 
 
-class CIP_Path(scapy_all.Packet):
+class CIP_Path(Packet):
     name = "CIP_Path"
     fields_desc = [
-        scapy_all.ByteField("wordsize", None),
+        ByteField("wordsize", None),
         CIP_PathField("path", None, length_from=lambda p: 2 * p.wordsize),
     ]
 
@@ -260,14 +262,14 @@ class CIP_Path(scapy_all.Packet):
         return self.get_field("path").i2repr(self, self.path)
 
 
-class CIP_ResponseStatus(scapy_all.Packet):
+class CIP_ResponseStatus(Packet):
     """The response field of CIP headers"""
     name = "CIP_ResponseStatus"
     fields_desc = [
-        scapy_all.XByteField("reserved", 0),  # Reserved byte, always null
-        scapy_all.ByteEnumField("status", 0, {0: "success"}),
-        scapy_all.XByteField("additional_size", 0),
-        scapy_all.StrLenField("additional", "",  # additionnal status
+        XByteField("reserved", 0),  # Reserved byte, always null
+        ByteEnumField("status", 0, {0: "success"}),
+        XByteField("additional_size", 0),
+        StrLenField("additional", "",  # additionnal status
                               length_from=lambda p: 2 * p.additional_size),
     ]
 
@@ -324,7 +326,7 @@ class CIP_ResponseStatus(scapy_all.Packet):
 
     def __repr__(self):
         if self.reserved != 0:
-            return scapy_all.Packet.__repr__(self)
+            return Packet.__repr__(self)
 
         # Known status
         if self.status in self.ERROR_CODES and self.additional_size == 0:
@@ -337,10 +339,10 @@ class CIP_ResponseStatus(scapy_all.Packet):
         # Forward Open failure
         if self.status == 1 and self.additional == b"\x00\x01":
             return "<CIP_ResponseStatus  status=Connection failure>"
-        return scapy_all.Packet.__repr__(self)
+        return Packet.__repr__(self)
 
 
-class CIP(scapy_all.Packet):
+class CIP(Packet):
     name = "CIP"
 
     SERVICE_CODES = {
@@ -368,11 +370,11 @@ class CIP(scapy_all.Packet):
     }
 
     fields_desc = [
-        scapy_all.BitEnumField("direction", None, 1, {0: "request", 1: "response"}),
+        BitEnumField("direction", None, 1, {0: "request", 1: "response"}),
         utils.XBitEnumField("service", 0, 7, SERVICE_CODES),
-        scapy_all.PacketListField("path", [], CIP_Path,
+        PacketListField("path", [], CIP_Path,
                                   count_from=lambda p: 1 if p.direction == 0 else 0),
-        scapy_all.PacketListField("status", [], CIP_ResponseStatus,
+        PacketListField("status", [], CIP_ResponseStatus,
                                   count_from=lambda p: 1 if p.direction == 1 else 0),
     ]
 
@@ -390,7 +392,7 @@ class CIP(scapy_all.Packet):
         return p + pay
 
 
-class _CIPMSPPacketList(scapy_all.PacketListField):
+class _CIPMSPPacketList(PacketListField):
     """The list of packets in a CIP MultipleServicePacket message"""
 
     def getfield(self, pkt, remain):
@@ -400,7 +402,7 @@ class _CIPMSPPacketList(scapy_all.PacketListField):
         shift = pkt.offsets[0] - cur_offset
         if shift > 0:
             # There is some padding between the CIP MSP header and the first packet
-            lst.append(scapy_all.conf.raw_layer(load=remain[:shift]))
+            lst.append(conf.raw_layer(load=remain[:shift]))
             remain = remain[shift:]
         cur_offset += shift
         for off in pkt.offsets[1:]:
@@ -408,9 +410,9 @@ class _CIPMSPPacketList(scapy_all.PacketListField):
             try:
                 p = self.m2i(pkt, remain[:off - cur_offset])
             except Exception:
-                if scapy_all.conf.debug_dissector:
+                if conf.debug_dissector:
                     raise
-                p = scapy_all.conf.raw_layer(load=remain[:off - cur_offset])
+                p = conf.raw_layer(load=remain[:off - cur_offset])
             remain = remain[off - cur_offset:]
             lst.append(p)
             cur_offset = off
@@ -420,24 +422,24 @@ class _CIPMSPPacketList(scapy_all.PacketListField):
             try:
                 p = self.m2i(pkt, remain)
             except Exception:
-                if scapy_all.conf.debug_dissector:
+                if conf.debug_dissector:
                     raise
-                p = scapy_all.conf.raw_layer(load=remain)
+                p = conf.raw_layer(load=remain)
             lst.append(p)
         return "", lst
 
 
-class CIP_ConnectionParam(scapy_all.Packet):
+class CIP_ConnectionParam(Packet):
     """CIP Connection parameters"""
     name = "CIP_ConnectionParam"
     fields_desc = [
-        scapy_all.BitEnumField("owner", 0, 1, {0: "exclusive", 1: "multiple"}),
-        scapy_all.BitEnumField("connection_type", 2, 2,
+        BitEnumField("owner", 0, 1, {0: "exclusive", 1: "multiple"}),
+        BitEnumField("connection_type", 2, 2,
                                {0: "null", 1: "multicast", 2: "point-to-point", 3: "reserved"}),
-        scapy_all.BitField("reserved", 0, 1),
-        scapy_all.BitEnumField("priority", 0, 2, {0: "low", 1: "high", 2: "scheduled", 3: "urgent"}),
-        scapy_all.BitEnumField("connection_size_type", 0, 1, {0: "fixed", 1: "variable"}),
-        scapy_all.BitField("connection_size", 500, 9),
+        BitField("reserved", 0, 1),
+        BitEnumField("priority", 0, 2, {0: "low", 1: "high", 2: "scheduled", 3: "urgent"}),
+        BitEnumField("connection_size_type", 0, 1, {0: "fixed", 1: "variable"}),
+        BitField("connection_size", 500, 9),
     ]
 
     def pre_dissect(self, s):
@@ -452,67 +454,67 @@ class CIP_ConnectionParam(scapy_all.Packet):
         return '', s
 
 
-class CIP_ReqForwardOpen(scapy_all.Packet):
+class CIP_ReqForwardOpen(Packet):
     """Forward Open request"""
     name = "CIP_ReqForwardOpen"
     fields_desc = [
-        scapy_all.BitField("priority", 0, 4),
-        scapy_all.BitField("tick_time", 0, 4),
-        scapy_all.ByteField("timeout_ticks", 249),
-        scapy_all.LEIntField("OT_network_connection_id", 0x80000031),
-        scapy_all.LEIntField("TO_network_connection_id", 0x80fe0030),
-        scapy_all.LEShortField("connection_serial_number", 0x1337),
-        scapy_all.LEShortField("vendor_id", 0x004d),
-        scapy_all.LEIntField("originator_serial_number", 0xdeadbeef),
-        scapy_all.ByteField("connection_timeout_multiplier", 0),
-        scapy_all.X3BytesField("reserved", 0),
-        scapy_all.LEIntField("OT_rpi", 0x007a1200),  # 8000 ms
-        scapy_all.PacketField('OT_connection_param', CIP_ConnectionParam(), CIP_ConnectionParam),
-        scapy_all.LEIntField("TO_rpi", 0x007a1200),
-        scapy_all.PacketField('TO_connection_param', CIP_ConnectionParam(), CIP_ConnectionParam),
-        scapy_all.XByteField("transport_type", 0xa3),  # direction server, application object, class 3
-        scapy_all.ByteField("path_wordsize", None),
+        BitField("priority", 0, 4),
+        BitField("tick_time", 0, 4),
+        ByteField("timeout_ticks", 249),
+        LEIntField("OT_network_connection_id", 0x80000031),
+        LEIntField("TO_network_connection_id", 0x80fe0030),
+        LEShortField("connection_serial_number", 0x1337),
+        LEShortField("vendor_id", 0x004d),
+        LEIntField("originator_serial_number", 0xdeadbeef),
+        ByteField("connection_timeout_multiplier", 0),
+        X3BytesField("reserved", 0),
+        LEIntField("OT_rpi", 0x007a1200),  # 8000 ms
+        PacketField('OT_connection_param', CIP_ConnectionParam(), CIP_ConnectionParam),
+        LEIntField("TO_rpi", 0x007a1200),
+        PacketField('TO_connection_param', CIP_ConnectionParam(), CIP_ConnectionParam),
+        XByteField("transport_type", 0xa3),  # direction server, application object, class 3
+        ByteField("path_wordsize", None),
         CIP_PathField("path", None, length_from=lambda p: 2 * p.path_wordsize),
     ]
 
 
-class CIP_RespForwardOpen(scapy_all.Packet):
+class CIP_RespForwardOpen(Packet):
     """Forward Open response"""
     name = "CIP_RespForwardOpen"
     fields_desc = [
-        scapy_all.LEIntField("OT_network_connection_id", None),
-        scapy_all.LEIntField("TO_network_connection_id", None),
-        scapy_all.LEShortField("connection_serial_number", None),
-        scapy_all.LEShortField("vendor_id", None),
-        scapy_all.LEIntField("originator_serial_number", None),
-        scapy_all.LEIntField("OT_api", None),
-        scapy_all.LEIntField("TO_api", None),
-        scapy_all.ByteField("application_reply_size", None),
-        scapy_all.XByteField("reserved", 0),
+        LEIntField("OT_network_connection_id", None),
+        LEIntField("TO_network_connection_id", None),
+        LEShortField("connection_serial_number", None),
+        LEShortField("vendor_id", None),
+        LEIntField("originator_serial_number", None),
+        LEIntField("OT_api", None),
+        LEIntField("TO_api", None),
+        ByteField("application_reply_size", None),
+        XByteField("reserved", 0),
     ]
 
 
-class CIP_ReqForwardClose(scapy_all.Packet):
+class CIP_ReqForwardClose(Packet):
     """Forward Close request"""
     name = "CIP_ReqForwardClose"
     fields_desc = [
-        scapy_all.XByteField("priority_ticktime", 0),
-        scapy_all.ByteField("timeout_ticks", 249),
-        scapy_all.LEShortField("connection_serial_number", 0x1337),
-        scapy_all.LEShortField("vendor_id", 0x004d),
-        scapy_all.LEIntField("originator_serial_number", 0xdeadbeef),
-        scapy_all.ByteField("path_wordsize", None),
-        scapy_all.XByteField("reserved", 0),
+        XByteField("priority_ticktime", 0),
+        ByteField("timeout_ticks", 249),
+        LEShortField("connection_serial_number", 0x1337),
+        LEShortField("vendor_id", 0x004d),
+        LEIntField("originator_serial_number", 0xdeadbeef),
+        ByteField("path_wordsize", None),
+        XByteField("reserved", 0),
         CIP_PathField("path", None, length_from=lambda p: 2 * p.path_wordsize),
     ]
 
 
-class CIP_MultipleServicePacket(scapy_all.Packet):
+class CIP_MultipleServicePacket(Packet):
     """Multiple_Service_Packet request or response"""
     name = "CIP_MultipleServicePacket"
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="packets"),
-        scapy_all.FieldListField("offsets", [], scapy_all.LEShortField("", 0),
+        FieldListField("offsets", [], LEShortField("", 0),
                                  count_from=lambda pkt: pkt.count),
         # Assume the offsets are increasing, and no padding. FIXME: remove this assumption
         _CIPMSPPacketList("packets", [], CIP)
@@ -531,21 +533,21 @@ class CIP_MultipleServicePacket(scapy_all.Packet):
         return struct.pack("<H", len(subpkts)) + "".join(offsets) + "".join(subpkts)
 
 
-class CIP_ReqConnectionManager(scapy_all.Packet):
+class CIP_ReqConnectionManager(Packet):
     fields_desc = [
-        scapy_all.BitField("reserved", 0, 3),
-        scapy_all.BitField("priority", 0, 1),
-        scapy_all.BitField("ticktime", 5, 4),
-        scapy_all.ByteField("timeout_ticks", 157),
+        BitField("reserved", 0, 3),
+        BitField("priority", 0, 1),
+        BitField("ticktime", 5, 4),
+        ByteField("timeout_ticks", 157),
         utils.LEShortLenField("message_size", None, length_of="message"),
-        scapy_all.PacketLenField("message", None, CIP,
+        PacketLenField("message", None, CIP,
                                  length_from=lambda pkt: pkt.message_size),
-        scapy_all.StrLenField("message_padding", None,
+        StrLenField("message_padding", None,
                               length_from=lambda pkt: pkt.message_size % 2),
-        scapy_all.ByteField("route_path_size", 1),  # TODO: size in words
-        scapy_all.ByteField("reserved2", 0),
-        scapy_all.ByteField("route_path_size_port", 1),
-        scapy_all.ByteField("route_path_size_addr", 0),
+        ByteField("route_path_size", 1),  # TODO: size in words
+        ByteField("reserved2", 0),
+        ByteField("route_path_size_port", 1),
+        ByteField("route_path_size_addr", 0),
     ]
 
     def post_build(self, p, pay):
@@ -555,22 +557,22 @@ class CIP_ReqConnectionManager(scapy_all.Packet):
         return p + pay
 
 
-scapy_all.bind_layers(enip_tcp.ENIP_ConnectionPacket, CIP)
-scapy_all.bind_layers(enip_tcp.ENIP_SendUnitData_Item, CIP, type_id=0x00b2)
+bind_layers(enip_tcp.ENIP_ConnectionPacket, CIP)
+bind_layers(enip_tcp.ENIP_SendUnitData_Item, CIP, type_id=0x00b2)
 
-scapy_all.bind_layers(CIP, CIP_RespAttributesAll, direction=1, service=0x01)
-scapy_all.bind_layers(CIP, CIP_ReqGetAttributeList, direction=0, service=0x03)
-scapy_all.bind_layers(CIP, CIP_RespAttributesList, direction=1, service=0x03)
-scapy_all.bind_layers(CIP, CIP_MultipleServicePacket, service=0x0a)
-scapy_all.bind_layers(CIP, CIP_RespSingleAttribute, direction=1, service=0x0e)
-scapy_all.bind_layers(CIP, CIP_ReqReadOtherTag, direction=0, service=0x4c)
-scapy_all.bind_layers(CIP, CIP_ReqReadOtherTag, direction=0, service=0x4f)
-scapy_all.bind_layers(CIP, CIP_ReqForwardOpen, direction=0, service=0x54)
-scapy_all.bind_layers(CIP, CIP_RespForwardOpen, direction=1, service=0x54)
+bind_layers(CIP, CIP_RespAttributesAll, direction=1, service=0x01)
+bind_layers(CIP, CIP_ReqGetAttributeList, direction=0, service=0x03)
+bind_layers(CIP, CIP_RespAttributesList, direction=1, service=0x03)
+bind_layers(CIP, CIP_MultipleServicePacket, service=0x0a)
+bind_layers(CIP, CIP_RespSingleAttribute, direction=1, service=0x0e)
+bind_layers(CIP, CIP_ReqReadOtherTag, direction=0, service=0x4c)
+bind_layers(CIP, CIP_ReqReadOtherTag, direction=0, service=0x4f)
+bind_layers(CIP, CIP_ReqForwardOpen, direction=0, service=0x54)
+bind_layers(CIP, CIP_RespForwardOpen, direction=1, service=0x54)
 
 # TODO: this is much imprecise :(
 # Need class in path to be 6 (Connection Manager)
-scapy_all.bind_layers(CIP, CIP_ReqConnectionManager, direction=0, service=0x52)
+bind_layers(CIP, CIP_ReqConnectionManager, direction=0, service=0x52)
 
 if __name__ == '__main__':
     # Test building/dissecting packets

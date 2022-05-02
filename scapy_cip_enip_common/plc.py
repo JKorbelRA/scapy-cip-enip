@@ -24,7 +24,7 @@ import logging
 import socket
 import struct
 
-from scapy import all as scapy_all
+from scapy.all import Raw
 
 from scapy_cip.cip import CIP, CIP_Path, CIP_ReqConnectionManager, \
     CIP_MultipleServicePacket, CIP_ReqForwardOpen, CIP_RespForwardOpen, \
@@ -164,7 +164,7 @@ class PLCClient(object):
         """Set the value of attribute class/instance/attr"""
         path = CIP_Path.make(class_id=class_id, instance_id=instance)
         # User CIP service 4: Set_Attribute_List
-        cippkt = CIP(service=4, path=path) / scapy_all.Raw(load=struct.pack('<HH', 1, attr) + value)
+        cippkt = CIP(service=4, path=path) / Raw(load=struct.pack('<HH', 1, attr) + value)
         self.send_rr_cm_cip(cippkt)
         if self.sock is None:
             return

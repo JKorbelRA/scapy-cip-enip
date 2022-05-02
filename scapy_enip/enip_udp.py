@@ -26,7 +26,8 @@ in SUTD's secure water treatment testbed.
 """
 import struct
 
-from scapy import all as scapy_all
+from scapy.all import Ether, IP, UDP, Raw, bind_layers, Packet, LEIntField, LEShortField, \
+    LEShortEnumField, PacketListField
 
 import scapy_cip_enip_common.utils as utils
 
@@ -39,22 +40,22 @@ ENIP_UDP_KEEPALIVE = (
     b'\xff\xff\xff\xff\x00\x00\x00\x00')
 
 
-class ENIP_UDP_SequencedAddress(scapy_all.Packet):
+class ENIP_UDP_SequencedAddress(Packet):
     name = "ENIP_UDP_SequencedAddress"
     fields_desc = [
-        scapy_all.LEIntField("connection_id", 0),
-        scapy_all.LEIntField("sequence", 0),
+        LEIntField("connection_id", 0),
+        LEIntField("sequence", 0),
     ]
 
 
-class ENIP_UDP_Item(scapy_all.Packet):
+class ENIP_UDP_Item(Packet):
     name = "ENIP_UDP_Item"
     fields_desc = [
-        scapy_all.LEShortEnumField("type_id", 0, {
+        LEShortEnumField("type_id", 0, {
             0x00b1: "Connected_Data_Item",
             0x8002: "Sequenced_Address",
         }),
-        scapy_all.LEShortField("length", None),
+        LEShortField("length", None),
     ]
 
     def extract_padding(self, p):
@@ -67,36 +68,36 @@ class ENIP_UDP_Item(scapy_all.Packet):
         return p + pay
 
 
-class ENIP_UDP(scapy_all.Packet):
+class ENIP_UDP(Packet):
     """Ethernet/IP packet over UDP"""
     name = "ENIP_UDP"
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="items"),
-        scapy_all.PacketListField("items", [], ENIP_UDP_Item,
-                                  count_from=lambda p: p.count),
+        PacketListField("items", [], ENIP_UDP_Item,
+                        count_from=lambda p: p.count),
     ]
 
     def extract_padding(self, p):
         return "", p
 
 
-scapy_all.bind_layers(scapy_all.UDP, ENIP_UDP, sport=2222, dport=2222)
-scapy_all.bind_layers(ENIP_UDP_Item, ENIP_UDP_SequencedAddress, type_id=0x8002)
+bind_layers(UDP, ENIP_UDP, sport=2222, dport=2222)
+bind_layers(ENIP_UDP_Item, ENIP_UDP_SequencedAddress, type_id=0x8002)
 
 if __name__ == '__main__':
     # Test building/dissecting packets
     # Build a keep-alive packet
-    pkt = scapy_all.Ether(src='00:1d:9c:c8:13:37', dst='01:00:5e:40:12:34')
-    pkt /= scapy_all.IP(src='192.168.1.42', dst='239.192.18.52')
-    pkt /= scapy_all.UDP(sport=2222, dport=2222)
+    pkt = Ether(src='00:1d:9c:c8:13:37', dst='01:00:5e:40:12:34')
+    pkt /= IP(src='192.168.1.42', dst='239.192.18.52')
+    pkt /= UDP(sport=2222, dport=2222)
     pkt /= ENIP_UDP(items=[
         ENIP_UDP_Item() / ENIP_UDP_SequencedAddress(connection_id=1337, sequence=42),
-        ENIP_UDP_Item(type_id=0x00b1) / scapy_all.Raw(load=ENIP_UDP_KEEPALIVE),
+        ENIP_UDP_Item(type_id=0x00b1) / Raw(load=ENIP_UDP_KEEPALIVE),
     ])
 
     # Build!
-    data = str(pkt)
-    pkt = scapy_all.Ether(data)
+    data = bytes(pkt)
+    pkt = Ether(data)
     pkt.show()
 
     # Test the value of some fields

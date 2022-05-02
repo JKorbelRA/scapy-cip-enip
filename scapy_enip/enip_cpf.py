@@ -22,23 +22,24 @@
 """Ethernet/IP Common Packet Format Scapy dissector."""
 import struct
 
-from scapy import all as scapy_all
+from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, PacketListField, \
+    bind_layers
 
 import scapy_cip_enip_common.utils as utils
 
 
-class CPF_SequencedAddressItem(scapy_all.Packet):
+class CPF_SequencedAddressItem(Packet):
     name = "CPF_SequencedAddressItem"
     fields_desc = [
-        scapy_all.LEIntField("connection_id", 0),
-        scapy_all.LEIntField("sequence_number", 0),
+        LEIntField("connection_id", 0),
+        LEIntField("sequence_number", 0),
     ]
 
 
-class CPF_AddressDataItem(scapy_all.Packet):
+class CPF_AddressDataItem(Packet):
     name = "CPF_AddressDataItem"
     fields_desc = [
-        scapy_all.LEShortEnumField('type_id', 0, {
+        LEShortEnumField('type_id', 0, {
             0x0000: "Null Address",
             0x00a1: "Connection-based Address",
             0x00b1: "Connected Transport Packet",
@@ -46,7 +47,7 @@ class CPF_AddressDataItem(scapy_all.Packet):
             0x0100: "ListServices response",
             0x8002: 'Sequenced Address Item',
         }),
-        scapy_all.LEShortField("length", None),
+        LEShortField("length", None),
     ]
 
     def extract_padding(self, p):
@@ -59,11 +60,11 @@ class CPF_AddressDataItem(scapy_all.Packet):
         return p + pay
 
 
-class ENIP_CPF(scapy_all.Packet):
+class ENIP_CPF(Packet):
     name = "ENIP_CPF"
     fields_desc = [
         utils.LEShortLenField("count", 2, count_of="items"),
-        scapy_all.PacketListField("items", [CPF_AddressDataItem('', 0, 0), CPF_AddressDataItem('', 0, 0)],
+        PacketListField("items", [CPF_AddressDataItem('', 0, 0), CPF_AddressDataItem('', 0, 0)],
                                   CPF_AddressDataItem, count_from=lambda p: p.count),
     ]
 
@@ -71,4 +72,4 @@ class ENIP_CPF(scapy_all.Packet):
         return '', p
 
 
-scapy_all.bind_layers(CPF_AddressDataItem, CPF_SequencedAddressItem, type_id=0x8002)
+bind_layers(CPF_AddressDataItem, CPF_SequencedAddressItem, type_id=0x8002)
