@@ -29,8 +29,8 @@ from scapy.all import Raw
 from scapy_cip.cip import CIP, CipPath, CipReqConnectionManager, \
     CipMultipleServicePacket, CipReqForwardOpen, CipRespForwardOpen, \
     CipReqForwardClose, CipReqGetAttributeList, CipReqReadOtherTag
-from scapy_enip.enip_tcp import ENIP_TCP, ENIP_SendUnitData, ENIP_SendUnitData_Item, \
-    ENIP_ConnectionAddress, ENIP_ConnectionPacket, ENIP_RegisterSession, ENIP_SendRRData
+from scapy_enip.enip_tcp import EnipTCP, EnipSendUnitData, EnipSendUnitData_Item, \
+    EnipConnectionAddress, EnipConnectionPacket, EnipRegisterSession, EnipSendRRData
 
 # Global switch to make it easy to test without sending anything
 NO_NETWORK = False
