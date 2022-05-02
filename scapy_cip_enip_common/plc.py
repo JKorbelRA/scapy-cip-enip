@@ -29,7 +29,7 @@ from scapy.all import Raw
 from scapy_cip.cip import CIP, CipPath, CipReqConnectionManager, \
     CipMultipleServicePacket, CipReqForwardOpen, CipRespForwardOpen, \
     CipReqForwardClose, CipReqGetAttributeList, CipReqReadOtherTag
-from scapy_enip.enip_tcp import EnipTCP, EnipSendUnitData, EnipSendUnitData_Item, \
+from scapy_enip.enip_tcp import EnipTCP, EnipSendUnitData, EnipSendUnitDataItem, \
     EnipConnectionAddress, EnipConnectionPacket, EnipRegisterSession, EnipSendRRData
 
 # Global switch to make it easy to test without sending anything
@@ -46,8 +46,8 @@ class PlcClient(object):
             try:
                 self.sock = socket.create_connection((plc_addr, plc_port))
             except socket.error as exc:
-                logger.warn("socket error: %s", exc)
-                logger.warn("Continuing without sending anything")
+                logger.warning("socket error: %s", exc)
+                logger.warning("Continuing without sending anything")
                 self.sock = None
         else:
             self.sock = None
@@ -70,8 +70,8 @@ class PlcClient(object):
         """Send a CIP packet over the TCP connection as an ENIP Req/Rep Data"""
         enippkt = EnipTCP(session=self.session_id)
         enippkt /= EnipSendRRData(items=[
-            EnipSendUnitData_Item(type_id=0),
-            EnipSendUnitData_Item() / cippkt
+            EnipSendUnitDataItem(type_id=0),
+            EnipSendUnitDataItem() / cippkt
         ])
         if self.sock is not None:
             self.sock.send(str(enippkt))
@@ -94,8 +94,8 @@ class PlcClient(object):
         """Send a CIP packet over the TCP connection as an ENIP Unit Data"""
         enippkt = EnipTCP(session=self.session_id)
         enippkt /= EnipSendUnitData(items=[
-            EnipSendUnitData_Item() / EnipConnectionAddress(connection_id=self.enip_connid),
-            EnipSendUnitData_Item() / EnipConnectionPacket(sequence=self.sequence) / cippkt
+            EnipSendUnitDataItem() / EnipConnectionAddress(connection_id=self.enip_connid),
+            EnipSendUnitDataItem() / EnipConnectionPacket(sequence=self.sequence) / cippkt
         ])
         self.sequence += 1
         if self.sock is not None:
@@ -218,7 +218,7 @@ class PlcClient(object):
             resppkt = self.recv_enippkt()
 
             cipstatus = resppkt[CIP].status[0].status
-            received_data = str(resppkt[CIP].payload)
+            received_data = bytes(resppkt[CIP].payload)
             if cipstatus == 0:
                 # Success
                 assert len(received_data) == remaining_size

@@ -38,8 +38,8 @@ class EnipConnectionPacket(Packet):
     fields_desc = [LEShortField("sequence", 0)]
 
 
-class EnipSendUnitData_Item(Packet):
-    name = "EnipSendUnitData_Item"
+class EnipSendUnitDataItem(Packet):
+    name = "EnipSendUnitDataItem"
     fields_desc = [
         LEShortEnumField("type_id", 0, {
             0x0000: "null_address",  # NULL Address
@@ -57,8 +57,7 @@ class EnipSendUnitData_Item(Packet):
 
     def post_build(self, p, pay):
         if self.length is None and pay:
-            l = len(pay)
-            p = p[:2] + struct.pack("<H", l) + p[4:]
+            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
         return p + pay
 
 
@@ -69,7 +68,7 @@ class EnipSendUnitData(Packet):
         LEIntField("interface_handle", 0),
         LEShortField("timeout", 0),
         utils.LEShortLenField("count", None, count_of="items"),
-        PacketListField("items", [], EnipSendUnitData_Item,
+        PacketListField("items", [], EnipSendUnitDataItem,
                         count_from=lambda p: p.count),
     ]
 
@@ -91,7 +90,8 @@ class EnipTCP(Packet):
     """Ethernet/IP packet over TCP"""
     name = "EnipTCP"
     fields_desc = [
-        LEShortEnumField("command_id", None, {
+        LEShortEnumField("command_id", 0, {
+            0x0000: "NOP",
             0x0004: "ListServices",
             0x0063: "ListIdentity",
             0x0064: "ListInterfaces",
@@ -112,8 +112,7 @@ class EnipTCP(Packet):
 
     def post_build(self, p, pay):
         if self.length is None and pay:
-            l = len(pay)
-            p = p[:2] + struct.pack("<H", l) + p[4:]
+            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
         return p + pay
 
 
@@ -123,10 +122,11 @@ bind_layers(TCP, EnipTCP, sport=44818)
 bind_layers(EnipTCP, EnipRegisterSession, command_id=0x0065)
 bind_layers(EnipTCP, EnipSendRRData, command_id=0x006f)
 bind_layers(EnipTCP, EnipSendUnitData, command_id=0x0070)
-bind_layers(EnipSendUnitData_Item, EnipConnectionAddress, type_id=0x00a1)
-bind_layers(EnipSendUnitData_Item, EnipConnectionPacket, type_id=0x00b1)
+bind_layers(EnipSendUnitDataItem, EnipConnectionAddress, type_id=0x00a1)
+bind_layers(EnipSendUnitDataItem, EnipConnectionPacket, type_id=0x00b1)
 
-if __name__ == '__main__':
+
+def run_tests():
     # Test building/dissecting packets
     # Build a raw packet over ENIP
     pkt = Ether(src='01:23:45:67:89:ab', dst='ba:98:76:54:32:10')
@@ -134,8 +134,8 @@ if __name__ == '__main__':
     pkt /= TCP(sport=10000, dport=44818)
     pkt /= EnipTCP()
     pkt /= EnipSendUnitData(items=[
-        EnipSendUnitData_Item() / EnipConnectionAddress(connection_id=1337),
-        EnipSendUnitData_Item() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
+        EnipSendUnitDataItem() / EnipConnectionAddress(connection_id=1337),
+        EnipSendUnitDataItem() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
     ])
 
     # Build!
@@ -158,3 +158,7 @@ if __name__ == '__main__':
     assert pkt[EnipSendUnitData].items[1].payload == pkt[EnipConnectionPacket]
     assert pkt[EnipConnectionPacket].sequence == 4242
     assert pkt[EnipConnectionPacket].payload.load == 'test'
+
+
+if __name__ == '__main__':
+    run_tests()

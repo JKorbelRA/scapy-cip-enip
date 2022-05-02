@@ -60,11 +60,11 @@ class CpfAddressDataItem(Packet):
         return p + pay
 
 
-class ENIP_CPF(Packet):
+class EnipCPF(Packet):
     name = "ENIP_CPF"
     fields_desc = [
         utils.LEShortLenField("count", 2, count_of="items"),
-        PacketListField("items", [CpfAddressDataItem('', 0, 0), CpfAddressDataItem('', 0, 0)],
+        PacketListField("items", [CpfAddressDataItem(b'', 0, 0), CpfAddressDataItem(b'', 0, 0)],
                         CpfAddressDataItem, count_from=lambda p: p.count),
     ]
 

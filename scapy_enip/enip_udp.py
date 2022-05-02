@@ -63,8 +63,7 @@ class EnipUdpItem(Packet):
 
     def post_build(self, p, pay):
         if self.length is None and pay:
-            l = len(pay)
-            p = p[:2] + struct.pack("<H", l) + p[4:]
+            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
         return p + pay
 
 
@@ -84,7 +83,8 @@ class EnipUDP(Packet):
 bind_layers(UDP, EnipUDP, sport=2222, dport=2222)
 bind_layers(EnipUdpItem, EnipUdpSequencedAddress, type_id=0x8002)
 
-if __name__ == '__main__':
+
+def run_tests():
     # Test building/dissecting packets
     # Build a keep-alive packet
     pkt = Ether(src='00:1d:9c:c8:13:37', dst='01:00:5e:40:12:34')
@@ -110,3 +110,7 @@ if __name__ == '__main__':
     assert pkt[EnipUDP].items[1].type_id == 0x00b1
     assert pkt[EnipUDP].items[1].length == 38
     assert pkt[EnipUDP].items[1].payload.load == ENIP_UDP_KEEPALIVE
+
+
+if __name__ == '__main__':
+    run_tests()
