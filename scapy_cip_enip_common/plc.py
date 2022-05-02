@@ -57,7 +57,7 @@ class PlcClient(object):
         # Open an Ethernet/IP session
         sessionpkt = EnipTCP() / EnipRegisterSession()
         if self.sock is not None:
-            self.sock.send(str(sessionpkt))
+            self.sock.send(bytes(sessionpkt))
             reply_pkt = self.recv_enippkt()
             self.session_id = reply_pkt.session
 
@@ -73,7 +73,7 @@ class PlcClient(object):
             EnipSendUnitDataItem() / cippkt
         ])
         if self.sock is not None:
-            self.sock.send(str(enippkt))
+            self.sock.send(bytes(enippkt))
 
     def send_rr_cm_cip(self, cippkt):
         """Encapsulate the CIP packet into a ConnectionManager packet"""
@@ -98,7 +98,7 @@ class PlcClient(object):
         ])
         self.sequence += 1
         if self.sock is not None:
-            self.sock.send(str(enippkt))
+            self.sock.send(bytes(enippkt))
 
     def recv_enippkt(self):
         """Receive an ENIP packet from the TCP socket"""
@@ -153,7 +153,7 @@ class PlcClient(object):
         if cippkt.status[0].status != 0:
             logger.error("CIP get attribute error: %r", cippkt.status[0])
             return
-        resp_getattrlist = str(cippkt.payload)
+        resp_getattrlist = bytes(cippkt.payload)
         assert resp_getattrlist[:2] == b'\x01\x00'  # Attribute count must be 1
         assert struct.unpack('<H', resp_getattrlist[2:4])[0] == attr  # First attribute
         assert resp_getattrlist[4:6] == b'\x00\x00'  # Status
@@ -187,7 +187,7 @@ class PlcClient(object):
             resppkt = self.recv_enippkt()
 
             # Decode a list of 32-bit integers
-            data = str(resppkt[CIP].payload)
+            data = bytes(resppkt[CIP].payload)
             for i in range(0, len(data), 4):
                 inst_list.append(struct.unpack('<I', data[i:i + 4])[0])
 

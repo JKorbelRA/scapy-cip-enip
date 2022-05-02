@@ -138,7 +138,7 @@ def run_tests():
     ])
 
     # Build!
-    data = str(pkt)
+    data = bytes(pkt)
     pkt = Ether(data)
     pkt.show()
 

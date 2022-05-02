@@ -581,7 +581,7 @@ def run_tests():
     # Test building/dissecting packets
     # Build a CIP Get Attribute All request
     path = CipPath.make(class_id=1, instance_id=1)
-    assert str(path) == b"\x03\x20\x01\x25\x00\x01\x00"
+    assert bytes(path) == b"\x03\x20\x01\x25\x00\x01\x00"
     pkt = CIP(service=1, path=path)
     pkt = CIP(bytes(pkt))
     pkt.show()
