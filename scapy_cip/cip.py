@@ -35,8 +35,8 @@ from scapy.all import Packet, StrField, LEShortField, StrLenField, FieldListFiel
     XByteField, ByteEnumField, BitEnumField, PacketListField, conf, BitField, LEIntField, \
     PacketField, X3BytesField, PacketLenField, bind_layers
 
-import scapy_enip.enip_tcp as enip_tcp
 import scapy_cip_enip_common.utils as utils
+import scapy_enip.enip_tcp as enip_tcp
 
 
 class CipRespSingleAttribute(Packet):
@@ -77,13 +77,15 @@ class CipRespAttributesList(Packet):
             attr, status = struct.unpack("<HH", content[offset:offset + 4])
             if attr not in attr_list:
                 if verbose:
-                    sys.stderr.write("Error: Get_Attribute_List response contains an unknown attribute\n")
+                    sys.stderr.write(
+                        "Error: Get_Attribute_List response contains an unknown attribute\n")
                     sys.stderr.write("... all attrs " + ','.join(hex(a) for a in attr_list) + '\n')
                     sys.stderr.write(hexdump(content[offset:], result='return') + "\n")
                 return
             if attr != attr_list[idx]:
                 if verbose:
-                    sys.stderr.write("Error: attr {:#x} not in position {} of attr list\n".format(attr, idx))
+                    sys.stderr.write(
+                        "Error: attr {:#x} not in position {} of attr list\n".format(attr, idx))
                     sys.stderr.write("... all attrs " + ','.join(hex(a) for a in attr_list) + '\n')
                 return
             offset += 4
@@ -124,7 +126,7 @@ class CipReqGetAttributeList(Packet):
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="attrs"),
         FieldListField("attrs", [], LEShortField("", 0),
-                                 count_from=lambda pkt: pkt.count),
+                       count_from=lambda pkt: pkt.count),
     ]
 
 
@@ -271,7 +273,7 @@ class CipResponseStatus(Packet):
         ByteEnumField("status", 0, {0: "success"}),
         XByteField("additional_size", 0),
         StrLenField("additional", "",  # additionnal status
-                              length_from=lambda p: 2 * p.additional_size),
+                    length_from=lambda p: 2 * p.additional_size),
     ]
 
     ERROR_CODES = {
@@ -374,9 +376,9 @@ class CIP(Packet):
         BitEnumField("direction", None, 1, {0: "request", 1: "response"}),
         utils.XBitEnumField("service", 0, 7, SERVICE_CODES),
         PacketListField("path", [], CipPath,
-                                  count_from=lambda p: 1 if p.direction == 0 else 0),
+                        count_from=lambda p: 1 if p.direction == 0 else 0),
         PacketListField("status", [], CipResponseStatus,
-                                  count_from=lambda p: 1 if p.direction == 1 else 0),
+                        count_from=lambda p: 1 if p.direction == 1 else 0),
     ]
 
     def post_build(self, p, pay):
@@ -436,7 +438,7 @@ class CipConnectionParam(Packet):
     fields_desc = [
         BitEnumField("owner", 0, 1, {0: "exclusive", 1: "multiple"}),
         BitEnumField("connection_type", 2, 2,
-                               {0: "null", 1: "multicast", 2: "point-to-point", 3: "reserved"}),
+                     {0: "null", 1: "multicast", 2: "point-to-point", 3: "reserved"}),
         BitField("reserved", 0, 1),
         BitEnumField("priority", 0, 2, {0: "low", 1: "high", 2: "scheduled", 3: "urgent"}),
         BitEnumField("connection_size_type", 0, 1, {0: "fixed", 1: "variable"}),
@@ -516,7 +518,7 @@ class CipMultipleServicePacket(Packet):
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="packets"),
         FieldListField("offsets", [], LEShortField("", 0),
-                                 count_from=lambda pkt: pkt.count),
+                       count_from=lambda pkt: pkt.count),
         # Assume the offsets are increasing, and no padding. FIXME: remove this assumption
         _CIPMSPPacketList("packets", [], CIP)
     ]
@@ -542,9 +544,9 @@ class CipReqConnectionManager(Packet):
         ByteField("timeout_ticks", 157),
         utils.LEShortLenField("message_size", None, length_of="message"),
         PacketLenField("message", None, CIP,
-                                 length_from=lambda pkt: pkt.message_size),
+                       length_from=lambda pkt: pkt.message_size),
         StrLenField("message_padding", None,
-                              length_from=lambda pkt: pkt.message_size % 2),
+                    length_from=lambda pkt: pkt.message_size % 2),
         ByteField("route_path_size", 1),  # TODO: size in words
         ByteField("reserved2", 0),
         ByteField("route_path_size_port", 1),

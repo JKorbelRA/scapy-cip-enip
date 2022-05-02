@@ -45,7 +45,8 @@ class EnipSendUnitData_Item(Packet):
             0x0000: "null_address",  # NULL Address
             0x00a1: "conn_address",  # Address for connection based requests
             0x00b1: "conn_packet",  # Connected Transport packet
-            0x00b2: "unconn_message",  # Unconnected Messages (eg. used within CIP command SendRRData)
+            0x00b2: "unconn_message",
+            # Unconnected Messages (eg. used within CIP command SendRRData)
             0x0100: "listservices_response",  # ListServices response
         }),
         LEShortField("length", None),
@@ -69,7 +70,7 @@ class EnipSendUnitData(Packet):
         LEShortField("timeout", 0),
         utils.LEShortLenField("count", None, count_of="items"),
         PacketListField("items", [], EnipSendUnitData_Item,
-                                  count_from=lambda p: p.count),
+                        count_from=lambda p: p.count),
     ]
 
 

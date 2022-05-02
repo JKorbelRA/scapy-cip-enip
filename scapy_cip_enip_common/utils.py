@@ -27,8 +27,8 @@ class LEShortLenField(FieldLenField):
     """A len field in a 2-byte integer"""
 
     def __init__(self, name, default, count_of=None, length_of=None):
-        FieldLenField.__init__(self, name, default, fmt="<H",
-                                         count_of=count_of, length_of=length_of)
+        FieldLenField.__init__(self, name, default, fmt="<H", count_of=count_of,
+                               length_of=length_of)
 
 
 class XBitEnumField(BitEnumField):

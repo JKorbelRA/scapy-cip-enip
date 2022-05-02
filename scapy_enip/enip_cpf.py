@@ -65,7 +65,7 @@ class ENIP_CPF(Packet):
     fields_desc = [
         utils.LEShortLenField("count", 2, count_of="items"),
         PacketListField("items", [CpfAddressDataItem('', 0, 0), CpfAddressDataItem('', 0, 0)],
-                                  CpfAddressDataItem, count_from=lambda p: p.count),
+                        CpfAddressDataItem, count_from=lambda p: p.count),
     ]
 
     def extract_padding(self, p):

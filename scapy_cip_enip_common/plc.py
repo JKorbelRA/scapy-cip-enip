@@ -180,7 +180,8 @@ class PlcClient(object):
         start_instance = 0
         inst_list = []
         while True:
-            cippkt = CIP(service=0x4b, path=CipPath.make(class_id=class_id, instance_id=start_instance))
+            cippkt = CIP(service=0x4b,
+                         path=CipPath.make(class_id=class_id, instance_id=start_instance))
             self.send_rr_cm_cip(cippkt)
             if self.sock is None:
                 return
@@ -208,7 +209,8 @@ class PlcClient(object):
         remaining_size = total_size
 
         while remaining_size > 0:
-            cippkt = CIP(service=0x4c, path=CipPath.make(class_id=class_id, instance_id=instance_id))
+            cippkt = CIP(service=0x4c,
+                         path=CipPath.make(class_id=class_id, instance_id=instance_id))
             cippkt /= CipReqReadOtherTag(start=offset, length=remaining_size)
             self.send_rr_cm_cip(cippkt)
             if self.sock is None:
