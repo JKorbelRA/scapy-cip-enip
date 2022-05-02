@@ -56,7 +56,7 @@ class PlcClient(object):
         self.sequence = 1
 
         # Open an Ethernet/IP session
-        sessionpkt = ENIP_TCP() / ENIP_RegisterSession()
+        sessionpkt = EnipTCP() / EnipRegisterSession()
         if self.sock is not None:
             self.sock.send(str(sessionpkt))
             reply_pkt = self.recv_enippkt()
@@ -68,10 +68,10 @@ class PlcClient(object):
 
     def send_rr_cip(self, cippkt):
         """Send a CIP packet over the TCP connection as an ENIP Req/Rep Data"""
-        enippkt = ENIP_TCP(session=self.session_id)
-        enippkt /= ENIP_SendRRData(items=[
-            ENIP_SendUnitData_Item(type_id=0),
-            ENIP_SendUnitData_Item() / cippkt
+        enippkt = EnipTCP(session=self.session_id)
+        enippkt /= EnipSendRRData(items=[
+            EnipSendUnitData_Item(type_id=0),
+            EnipSendUnitData_Item() / cippkt
         ])
         if self.sock is not None:
             self.sock.send(str(enippkt))
@@ -92,10 +92,10 @@ class PlcClient(object):
 
     def send_unit_cip(self, cippkt):
         """Send a CIP packet over the TCP connection as an ENIP Unit Data"""
-        enippkt = ENIP_TCP(session=self.session_id)
-        enippkt /= ENIP_SendUnitData(items=[
-            ENIP_SendUnitData_Item() / ENIP_ConnectionAddress(connection_id=self.enip_connid),
-            ENIP_SendUnitData_Item() / ENIP_ConnectionPacket(sequence=self.sequence) / cippkt
+        enippkt = EnipTCP(session=self.session_id)
+        enippkt /= EnipSendUnitData(items=[
+            EnipSendUnitData_Item() / EnipConnectionAddress(connection_id=self.enip_connid),
+            EnipSendUnitData_Item() / EnipConnectionPacket(sequence=self.sequence) / cippkt
         ])
         self.sequence += 1
         if self.sock is not None:
@@ -106,7 +106,7 @@ class PlcClient(object):
         if self.sock is None:
             return
         pktbytes = self.sock.recv(2000)
-        pkt = ENIP_TCP(pktbytes)
+        pkt = EnipTCP(pktbytes)
         return pkt
 
     def forward_open(self):

@@ -30,6 +30,7 @@ https://code.wireshark.org/review/gitweb?p=wireshark.git;a=blob;f=epan/dissector
 import struct
 import sys
 
+from hexdump import hexdump
 from scapy.all import Packet, StrField, LEShortField, StrLenField, FieldListField, ByteField, \
     XByteField, ByteEnumField, BitEnumField, PacketListField, conf, BitField, LEIntField, \
     PacketField, X3BytesField, PacketLenField, bind_layers
@@ -78,7 +79,7 @@ class CipRespAttributesList(Packet):
                 if verbose:
                     sys.stderr.write("Error: Get_Attribute_List response contains an unknown attribute\n")
                     sys.stderr.write("... all attrs " + ','.join(hex(a) for a in attr_list) + '\n')
-                    sys.stderr.write(utils.hexdump(content[offset:], indentlvl="... ") + "\n")
+                    sys.stderr.write(hexdump(content[offset:], result='return') + "\n")
                 return
             if attr != attr_list[idx]:
                 if verbose:
@@ -101,7 +102,7 @@ class CipRespAttributesList(Packet):
                 if verbose:
                     sys.stderr.write("Error: length not found. Here is the remaining\n")
                     sys.stderr.write("... all attrs " + ','.join(hex(a) for a in attr_list) + '\n')
-                    sys.stderr.write(utils.hexdump(content[offset:], indentlvl="... ") + "\n")
+                    sys.stderr.write(hexdump(content[offset:], result='return') + "\n")
                 return
             result.append((attr, content[offset:offset + attr_len]))
             offset += attr_len

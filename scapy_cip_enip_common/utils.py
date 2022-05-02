@@ -23,20 +23,6 @@
 from scapy.all import FieldLenField, BitEnumField, lhex
 
 
-def hexdump(data, columns=16, indentlvl=""):
-    """Return the hexadecimal representation of the data"""
-
-    def do_line(line):
-        return (
-            indentlvl +
-            " ".join("{:02x}".format(ord(b)) for b in line) +
-            "   " * (columns - len(line)) +
-            "  " +
-            "".join(b if 32 <= ord(b) < 127 else "." for b in line))
-
-    return "\n".join(do_line(data[i:i + columns]) for i in range(0, len(data), columns))
-
-
 class LEShortLenField(FieldLenField):
     """A len field in a 2-byte integer"""
 
