@@ -26,9 +26,9 @@ import struct
 
 from scapy.all import Raw
 
-from scapy_cip.cip import CIP, CIP_Path, CIP_ReqConnectionManager, \
-    CIP_MultipleServicePacket, CIP_ReqForwardOpen, CIP_RespForwardOpen, \
-    CIP_ReqForwardClose, CIP_ReqGetAttributeList, CIP_ReqReadOtherTag
+from scapy_cip.cip import CIP, CipPath, CipReqConnectionManager, \
+    CipMultipleServicePacket, CipReqForwardOpen, CipRespForwardOpen, \
+    CipReqForwardClose, CipReqGetAttributeList, CipReqReadOtherTag
 from scapy_enip.enip_tcp import ENIP_TCP, ENIP_SendUnitData, ENIP_SendUnitData_Item, \
     ENIP_ConnectionAddress, ENIP_ConnectionPacket, ENIP_RegisterSession, ENIP_SendRRData
 
@@ -38,7 +38,7 @@ NO_NETWORK = False
 logger = logging.getLogger(__name__)
 
 
-class PLCClient(object):
+class PlcClient(object):
     """Handle all the state of an Ethernet/IP session with a PLC"""
 
     def __init__(self, plc_addr, plc_port=44818):
@@ -79,15 +79,15 @@ class PLCClient(object):
     def send_rr_cm_cip(self, cippkt):
         """Encapsulate the CIP packet into a ConnectionManager packet"""
         cipcm_msg = [cippkt]
-        cippkt = CIP(path=CIP_Path.make(class_id=6, instance_id=1))
-        cippkt /= CIP_ReqConnectionManager(message=cipcm_msg)
+        cippkt = CIP(path=CipPath.make(class_id=6, instance_id=1))
+        cippkt /= CipReqConnectionManager(message=cipcm_msg)
         self.send_rr_cip(cippkt)
 
     def send_rr_mr_cip(self, cippkt):
         """Encapsulate the CIP packet into a MultipleServicePacket to MessageRouter"""
         cipcm_msg = [cippkt]
-        cippkt = CIP(path=CIP_Path(wordsize=2, path=b'\x20\x02\x24\x01'))
-        cippkt /= CIP_MultipleServicePacket(packets=cipcm_msg)
+        cippkt = CIP(path=CipPath(wordsize=2, path=b'\x20\x02\x24\x01'))
+        cippkt /= CipMultipleServicePacket(packets=cipcm_msg)
         self.send_rr_cip(cippkt)
 
     def send_unit_cip(self, cippkt):
@@ -111,8 +111,8 @@ class PLCClient(object):
 
     def forward_open(self):
         """Send a forward open request"""
-        cippkt = CIP(service=0x54, path=CIP_Path(wordsize=2, path=b'\x20\x06\x24\x01'))
-        cippkt /= CIP_ReqForwardOpen(path_wordsize=3, path=b"\x01\x00\x20\x02\x24\x01")
+        cippkt = CIP(service=0x54, path=CipPath(wordsize=2, path=b'\x20\x06\x24\x01'))
+        cippkt /= CipReqForwardOpen(path_wordsize=3, path=b"\x01\x00\x20\x02\x24\x01")
         self.send_rr_cip(cippkt)
         resppkt = self.recv_enippkt()
         if self.sock is None:
@@ -121,14 +121,14 @@ class PLCClient(object):
         if cippkt.status[0].status != 0:
             logger.error("Failed to Forward Open CIP connection: %r", cippkt.status[0])
             return False
-        assert isinstance(cippkt.payload, CIP_RespForwardOpen)
+        assert isinstance(cippkt.payload, CipRespForwardOpen)
         self.enip_connid = cippkt.payload.OT_network_connection_id
         return True
 
     def forward_close(self):
         """Send a forward close request"""
-        cippkt = CIP(service=0x4e, path=CIP_Path(wordsize=2, path=b'\x20\x06\x24\x01'))
-        cippkt /= CIP_ReqForwardClose(path_wordsize=3, path=b"\x01\x00\x20\x02\x24\x01")
+        cippkt = CIP(service=0x4e, path=CipPath(wordsize=2, path=b'\x20\x06\x24\x01'))
+        cippkt /= CipReqForwardClose(path_wordsize=3, path=b"\x01\x00\x20\x02\x24\x01")
         self.send_rr_cip(cippkt)
         if self.sock is None:
             return
@@ -142,10 +142,10 @@ class PLCClient(object):
     def get_attribute(self, class_id, instance, attr):
         """Get an attribute for the specified class/instance/attr path"""
         # Get_Attribute_Single does not seem to work properly
-        # path = CIP_Path.make(class_id=class_id, instance_id=instance, attribute_id=attr)
+        # path = CipPath.make(class_id=class_id, instance_id=instance, attribute_id=attr)
         # cippkt = CIP(service=0x0e, path=path)  # Get_Attribute_Single
-        path = CIP_Path.make(class_id=class_id, instance_id=instance)
-        cippkt = CIP(path=path) / CIP_ReqGetAttributeList(attrs=[attr])
+        path = CipPath.make(class_id=class_id, instance_id=instance)
+        cippkt = CIP(path=path) / CipReqGetAttributeList(attrs=[attr])
         self.send_rr_cm_cip(cippkt)
         if self.sock is None:
             return
@@ -162,7 +162,7 @@ class PLCClient(object):
 
     def set_attribute(self, class_id, instance, attr, value):
         """Set the value of attribute class/instance/attr"""
-        path = CIP_Path.make(class_id=class_id, instance_id=instance)
+        path = CipPath.make(class_id=class_id, instance_id=instance)
         # User CIP service 4: Set_Attribute_List
         cippkt = CIP(service=4, path=path) / Raw(load=struct.pack('<HH', 1, attr) + value)
         self.send_rr_cm_cip(cippkt)
@@ -180,7 +180,7 @@ class PLCClient(object):
         start_instance = 0
         inst_list = []
         while True:
-            cippkt = CIP(service=0x4b, path=CIP_Path.make(class_id=class_id, instance_id=start_instance))
+            cippkt = CIP(service=0x4b, path=CipPath.make(class_id=class_id, instance_id=start_instance))
             self.send_rr_cm_cip(cippkt)
             if self.sock is None:
                 return
@@ -208,8 +208,8 @@ class PLCClient(object):
         remaining_size = total_size
 
         while remaining_size > 0:
-            cippkt = CIP(service=0x4c, path=CIP_Path.make(class_id=class_id, instance_id=instance_id))
-            cippkt /= CIP_ReqReadOtherTag(start=offset, length=remaining_size)
+            cippkt = CIP(service=0x4c, path=CipPath.make(class_id=class_id, instance_id=instance_id))
+            cippkt /= CipReqReadOtherTag(start=offset, length=remaining_size)
             self.send_rr_cm_cip(cippkt)
             if self.sock is None:
                 return

@@ -28,16 +28,16 @@ from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, Packet
 import scapy_cip_enip_common.utils as utils
 
 
-class CPF_SequencedAddressItem(Packet):
-    name = "CPF_SequencedAddressItem"
+class CpfSequencedAddressItem(Packet):
+    name = "CpfSequencedAddressItem"
     fields_desc = [
         LEIntField("connection_id", 0),
         LEIntField("sequence_number", 0),
     ]
 
 
-class CPF_AddressDataItem(Packet):
-    name = "CPF_AddressDataItem"
+class CpfAddressDataItem(Packet):
+    name = "CpfAddressDataItem"
     fields_desc = [
         LEShortEnumField('type_id', 0, {
             0x0000: "Null Address",
@@ -64,12 +64,12 @@ class ENIP_CPF(Packet):
     name = "ENIP_CPF"
     fields_desc = [
         utils.LEShortLenField("count", 2, count_of="items"),
-        PacketListField("items", [CPF_AddressDataItem('', 0, 0), CPF_AddressDataItem('', 0, 0)],
-                                  CPF_AddressDataItem, count_from=lambda p: p.count),
+        PacketListField("items", [CpfAddressDataItem('', 0, 0), CpfAddressDataItem('', 0, 0)],
+                                  CpfAddressDataItem, count_from=lambda p: p.count),
     ]
 
     def extract_padding(self, p):
         return '', p
 
 
-bind_layers(CPF_AddressDataItem, CPF_SequencedAddressItem, type_id=0x8002)
+bind_layers(CpfAddressDataItem, CpfSequencedAddressItem, type_id=0x8002)

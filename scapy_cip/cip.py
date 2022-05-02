@@ -38,19 +38,19 @@ import scapy_enip.enip_tcp as enip_tcp
 import scapy_cip_enip_common.utils as utils
 
 
-class CIP_RespSingleAttribute(Packet):
+class CipRespSingleAttribute(Packet):
     """An attribute... not much information about it"""
     fields_desc = [StrField("value", None)]
 
 
-class CIP_RespAttributesAll(Packet):
+class CipRespAttributesAll(Packet):
     """Content of Get_Attribute_All response"""
     fields_desc = [
         StrField("value", None),
     ]
 
 
-class CIP_RespAttributesList(Packet):
+class CipRespAttributesList(Packet):
     """List of attributes in Get_Attribute_List responses
 
     There are "count" attributes in the "content" field, in the following format:
@@ -118,7 +118,7 @@ class CIP_RespAttributesList(Packet):
         return dict(result)
 
 
-class CIP_ReqGetAttributeList(Packet):
+class CipReqGetAttributeList(Packet):
     """The list of requested attributes in a CIP Get_Attribute_List request"""
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="attrs"),
@@ -127,7 +127,7 @@ class CIP_ReqGetAttributeList(Packet):
     ]
 
 
-class CIP_ReqReadOtherTag(Packet):
+class CipReqReadOtherTag(Packet):
     """Optional information to be sent with a Read_Tag_Service
 
     FIXME: this packet has been built from experiments, not from official doc
@@ -139,7 +139,7 @@ class CIP_ReqReadOtherTag(Packet):
     ]
 
 
-class CIP_PathField(StrLenField):
+class CipPathField(StrLenField):
     SEGMENT_TYPES = {
         0: "class",  # 0x20 = 8-bit class ID, 0x21 = 16-bit class ID
         1: "instance",  # 0x24 = 8-bit instance ID, 0x25 = 16-bit instance ID
@@ -208,11 +208,11 @@ class CIP_PathField(StrLenField):
         return cls.tuplelist2repr(cls.to_tuplelist(val))
 
 
-class CIP_Path(Packet):
-    name = "CIP_Path"
+class CipPath(Packet):
+    name = "CipPath"
     fields_desc = [
         ByteField("wordsize", None),
-        CIP_PathField("path", None, length_from=lambda p: 2 * p.wordsize),
+        CipPathField("path", None, length_from=lambda p: 2 * p.wordsize),
     ]
 
     def extract_padding(self, p):
@@ -220,7 +220,7 @@ class CIP_Path(Packet):
 
     @classmethod
     def make(cls, class_id=None, instance_id=None, member_id=None, attribute_id=None):
-        """Create a CIP_Path from its attributes"""
+        """Create a CipPath from its attributes"""
         content = b""
         if class_id is not None:
             if class_id < 256:  # 8-bit class ID
@@ -255,16 +255,16 @@ class CIP_Path(Packet):
 
     def to_tuplelist(self):
         """Return a list of tuples describing the content of the path encoded in val"""
-        return CIP_PathField.to_tuplelist(self.path)
+        return CipPathField.to_tuplelist(self.path)
 
     def to_repr(self):
         """Return a representation of the path, not of the packet (!= repr(path))"""
         return self.get_field("path").i2repr(self, self.path)
 
 
-class CIP_ResponseStatus(Packet):
+class CipResponseStatus(Packet):
     """The response field of CIP headers"""
-    name = "CIP_ResponseStatus"
+    name = "CipResponseStatus"
     fields_desc = [
         XByteField("reserved", 0),  # Reserved byte, always null
         ByteEnumField("status", 0, {0: "success"}),
@@ -330,15 +330,15 @@ class CIP_ResponseStatus(Packet):
 
         # Known status
         if self.status in self.ERROR_CODES and self.additional_size == 0:
-            return "<CIP_ResponseStatus  status={}>".format(self.ERROR_CODES[self.status])
+            return "<CipResponseStatus  status={}>".format(self.ERROR_CODES[self.status])
 
         # Simple status
         if self.additional_size == 0:
-            return "<CIP_ResponseStatus  status=%#x>" % self.status
+            return "<CipResponseStatus  status=%#x>" % self.status
 
         # Forward Open failure
         if self.status == 1 and self.additional == b"\x00\x01":
-            return "<CIP_ResponseStatus  status=Connection failure>"
+            return "<CipResponseStatus  status=Connection failure>"
         return Packet.__repr__(self)
 
 
@@ -372,9 +372,9 @@ class CIP(Packet):
     fields_desc = [
         BitEnumField("direction", None, 1, {0: "request", 1: "response"}),
         utils.XBitEnumField("service", 0, 7, SERVICE_CODES),
-        PacketListField("path", [], CIP_Path,
+        PacketListField("path", [], CipPath,
                                   count_from=lambda p: 1 if p.direction == 0 else 0),
-        PacketListField("status", [], CIP_ResponseStatus,
+        PacketListField("status", [], CipResponseStatus,
                                   count_from=lambda p: 1 if p.direction == 1 else 0),
     ]
 
@@ -429,9 +429,9 @@ class _CIPMSPPacketList(PacketListField):
         return "", lst
 
 
-class CIP_ConnectionParam(Packet):
+class CipConnectionParam(Packet):
     """CIP Connection parameters"""
-    name = "CIP_ConnectionParam"
+    name = "CipConnectionParam"
     fields_desc = [
         BitEnumField("owner", 0, 1, {0: "exclusive", 1: "multiple"}),
         BitEnumField("connection_type", 2, 2,
@@ -454,9 +454,9 @@ class CIP_ConnectionParam(Packet):
         return '', s
 
 
-class CIP_ReqForwardOpen(Packet):
+class CipReqForwardOpen(Packet):
     """Forward Open request"""
-    name = "CIP_ReqForwardOpen"
+    name = "CipReqForwardOpen"
     fields_desc = [
         BitField("priority", 0, 4),
         BitField("tick_time", 0, 4),
@@ -469,18 +469,18 @@ class CIP_ReqForwardOpen(Packet):
         ByteField("connection_timeout_multiplier", 0),
         X3BytesField("reserved", 0),
         LEIntField("OT_rpi", 0x007a1200),  # 8000 ms
-        PacketField('OT_connection_param', CIP_ConnectionParam(), CIP_ConnectionParam),
+        PacketField('OT_connection_param', CipConnectionParam(), CipConnectionParam),
         LEIntField("TO_rpi", 0x007a1200),
-        PacketField('TO_connection_param', CIP_ConnectionParam(), CIP_ConnectionParam),
+        PacketField('TO_connection_param', CipConnectionParam(), CipConnectionParam),
         XByteField("transport_type", 0xa3),  # direction server, application object, class 3
         ByteField("path_wordsize", None),
-        CIP_PathField("path", None, length_from=lambda p: 2 * p.path_wordsize),
+        CipPathField("path", None, length_from=lambda p: 2 * p.path_wordsize),
     ]
 
 
-class CIP_RespForwardOpen(Packet):
+class CipRespForwardOpen(Packet):
     """Forward Open response"""
-    name = "CIP_RespForwardOpen"
+    name = "CipRespForwardOpen"
     fields_desc = [
         LEIntField("OT_network_connection_id", None),
         LEIntField("TO_network_connection_id", None),
@@ -494,9 +494,9 @@ class CIP_RespForwardOpen(Packet):
     ]
 
 
-class CIP_ReqForwardClose(Packet):
+class CipReqForwardClose(Packet):
     """Forward Close request"""
-    name = "CIP_ReqForwardClose"
+    name = "CipReqForwardClose"
     fields_desc = [
         XByteField("priority_ticktime", 0),
         ByteField("timeout_ticks", 249),
@@ -505,13 +505,13 @@ class CIP_ReqForwardClose(Packet):
         LEIntField("originator_serial_number", 0xdeadbeef),
         ByteField("path_wordsize", None),
         XByteField("reserved", 0),
-        CIP_PathField("path", None, length_from=lambda p: 2 * p.path_wordsize),
+        CipPathField("path", None, length_from=lambda p: 2 * p.path_wordsize),
     ]
 
 
-class CIP_MultipleServicePacket(Packet):
+class CipMultipleServicePacket(Packet):
     """Multiple_Service_Packet request or response"""
-    name = "CIP_MultipleServicePacket"
+    name = "CipMultipleServicePacket"
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="packets"),
         FieldListField("offsets", [], LEShortField("", 0),
@@ -533,7 +533,7 @@ class CIP_MultipleServicePacket(Packet):
         return struct.pack("<H", len(subpkts)) + "".join(offsets) + "".join(subpkts)
 
 
-class CIP_ReqConnectionManager(Packet):
+class CipReqConnectionManager(Packet):
     fields_desc = [
         BitField("reserved", 0, 3),
         BitField("priority", 0, 1),
@@ -560,24 +560,24 @@ class CIP_ReqConnectionManager(Packet):
 bind_layers(enip_tcp.ENIP_ConnectionPacket, CIP)
 bind_layers(enip_tcp.ENIP_SendUnitData_Item, CIP, type_id=0x00b2)
 
-bind_layers(CIP, CIP_RespAttributesAll, direction=1, service=0x01)
-bind_layers(CIP, CIP_ReqGetAttributeList, direction=0, service=0x03)
-bind_layers(CIP, CIP_RespAttributesList, direction=1, service=0x03)
-bind_layers(CIP, CIP_MultipleServicePacket, service=0x0a)
-bind_layers(CIP, CIP_RespSingleAttribute, direction=1, service=0x0e)
-bind_layers(CIP, CIP_ReqReadOtherTag, direction=0, service=0x4c)
-bind_layers(CIP, CIP_ReqReadOtherTag, direction=0, service=0x4f)
-bind_layers(CIP, CIP_ReqForwardOpen, direction=0, service=0x54)
-bind_layers(CIP, CIP_RespForwardOpen, direction=1, service=0x54)
+bind_layers(CIP, CipRespAttributesAll, direction=1, service=0x01)
+bind_layers(CIP, CipReqGetAttributeList, direction=0, service=0x03)
+bind_layers(CIP, CipRespAttributesList, direction=1, service=0x03)
+bind_layers(CIP, CipMultipleServicePacket, service=0x0a)
+bind_layers(CIP, CipRespSingleAttribute, direction=1, service=0x0e)
+bind_layers(CIP, CipReqReadOtherTag, direction=0, service=0x4c)
+bind_layers(CIP, CipReqReadOtherTag, direction=0, service=0x4f)
+bind_layers(CIP, CipReqForwardOpen, direction=0, service=0x54)
+bind_layers(CIP, CipRespForwardOpen, direction=1, service=0x54)
 
 # TODO: this is much imprecise :(
 # Need class in path to be 6 (Connection Manager)
-bind_layers(CIP, CIP_ReqConnectionManager, direction=0, service=0x52)
+bind_layers(CIP, CipReqConnectionManager, direction=0, service=0x52)
 
 if __name__ == '__main__':
     # Test building/dissecting packets
     # Build a CIP Get Attribute All request
-    path = CIP_Path.make(class_id=1, instance_id=1)
+    path = CipPath.make(class_id=1, instance_id=1)
     assert str(path) == b"\x03\x20\x01\x25\x00\x01\x00"
     pkt = CIP(service=1, path=path)
     pkt = CIP(str(pkt))
@@ -586,7 +586,7 @@ if __name__ == '__main__':
     assert pkt[CIP].path[0] == path
 
     # Build a CIP Get_Attribute_List response
-    pkt = CIP() / CIP_RespAttributesList(count=1, content="test")
+    pkt = CIP() / CipRespAttributesList(count=1, content="test")
     pkt = CIP(str(pkt))
     pkt.show()
     assert pkt[CIP].direction == 1
@@ -595,25 +595,25 @@ if __name__ == '__main__':
     assert pkt[CIP].status[0].status == 0
     assert pkt[CIP].status[0].additional_size == 0
     assert pkt[CIP].status[0].additional == ""
-    assert pkt[CIP].payload == pkt[CIP_RespAttributesList]
-    assert pkt[CIP_RespAttributesList].count == 1
-    assert pkt[CIP_RespAttributesList].content == "test"
+    assert pkt[CIP].payload == pkt[CipRespAttributesList]
+    assert pkt[CipRespAttributesList].count == 1
+    assert pkt[CipRespAttributesList].content == "test"
 
     # Build a Multiple Service Packet Request
-    pkt = CIP(path=CIP_Path.make(class_id=2, instance_id=1))
-    pkt /= CIP_MultipleServicePacket(packets=[
-        CIP(path=CIP_Path.make(class_id=0x70, instance_id=1)) / CIP_ReqGetAttributeList(attrs=[1, 2]),
-        CIP(service=0x0e, path=CIP_Path.make(class_id=0x8e, instance_id=1, attribute_id=0x1b)),
+    pkt = CIP(path=CipPath.make(class_id=2, instance_id=1))
+    pkt /= CipMultipleServicePacket(packets=[
+        CIP(path=CipPath.make(class_id=0x70, instance_id=1)) / CipReqGetAttributeList(attrs=[1, 2]),
+        CIP(service=0x0e, path=CipPath.make(class_id=0x8e, instance_id=1, attribute_id=0x1b)),
     ])
     pkt = CIP(str(pkt))
     pkt.show()
     assert pkt[CIP].direction == 0
     assert pkt[CIP].service == 0x0a
-    assert pkt[CIP].path[0] == CIP_Path.make(class_id=2, instance_id=1)
-    assert pkt[CIP].payload == pkt[CIP_MultipleServicePacket]
-    assert pkt[CIP_MultipleServicePacket].count == 2
-    assert pkt[CIP_MultipleServicePacket].offsets == [6, 20]
-    assert pkt[CIP_MultipleServicePacket].packets[0].service == 0x03
-    assert pkt[CIP_MultipleServicePacket].packets[0].payload.count == 2
-    assert pkt[CIP_MultipleServicePacket].packets[0].payload.attrs == [1, 2]
-    assert pkt[CIP_MultipleServicePacket].packets[1].service == 0x0e
+    assert pkt[CIP].path[0] == CipPath.make(class_id=2, instance_id=1)
+    assert pkt[CIP].payload == pkt[CipMultipleServicePacket]
+    assert pkt[CipMultipleServicePacket].count == 2
+    assert pkt[CipMultipleServicePacket].offsets == [6, 20]
+    assert pkt[CipMultipleServicePacket].packets[0].service == 0x03
+    assert pkt[CipMultipleServicePacket].packets[0].payload.count == 2
+    assert pkt[CipMultipleServicePacket].packets[0].payload.attrs == [1, 2]
+    assert pkt[CipMultipleServicePacket].packets[1].service == 0x0e

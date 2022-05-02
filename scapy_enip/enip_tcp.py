@@ -28,18 +28,18 @@ from scapy.all import Packet, LEIntField, LEShortField, LEShortEnumField, Packet
 import scapy_cip_enip_common.utils as utils
 
 
-class ENIP_ConnectionAddress(Packet):
-    name = "ENIP_ConnectionAddress"
+class EnipConnectionAddress(Packet):
+    name = "EnipConnectionAddress"
     fields_desc = [LEIntField("connection_id", 0)]
 
 
-class ENIP_ConnectionPacket(Packet):
-    name = "ENIP_ConnectionPacket"
+class EnipConnectionPacket(Packet):
+    name = "EnipConnectionPacket"
     fields_desc = [LEShortField("sequence", 0)]
 
 
-class ENIP_SendUnitData_Item(Packet):
-    name = "ENIP_SendUnitData_Item"
+class EnipSendUnitData_Item(Packet):
+    name = "EnipSendUnitData_Item"
     fields_desc = [
         LEShortEnumField("type_id", 0, {
             0x0000: "null_address",  # NULL Address
@@ -61,34 +61,34 @@ class ENIP_SendUnitData_Item(Packet):
         return p + pay
 
 
-class ENIP_SendUnitData(Packet):
+class EnipSendUnitData(Packet):
     """Data in ENIP header specific to the specified command"""
-    name = "ENIP_SendUnitData"
+    name = "EnipSendUnitData"
     fields_desc = [
         LEIntField("interface_handle", 0),
         LEShortField("timeout", 0),
         utils.LEShortLenField("count", None, count_of="items"),
-        PacketListField("items", [], ENIP_SendUnitData_Item,
+        PacketListField("items", [], EnipSendUnitData_Item,
                                   count_from=lambda p: p.count),
     ]
 
 
-class ENIP_SendRRData(Packet):
-    name = "ENIP_SendRRData"
-    fields_desc = ENIP_SendUnitData.fields_desc
+class EnipSendRRData(Packet):
+    name = "EnipSendRRData"
+    fields_desc = EnipSendUnitData.fields_desc
 
 
-class ENIP_RegisterSession(Packet):
-    name = "ENIP_RegisterSession"
+class EnipRegisterSession(Packet):
+    name = "EnipRegisterSession"
     fields_desc = [
         LEShortField("protocol_version", 1),
         LEShortField("options", 0),
     ]
 
 
-class ENIP_TCP(Packet):
+class EnipTCP(Packet):
     """Ethernet/IP packet over TCP"""
-    name = "ENIP_TCP"
+    name = "EnipTCP"
     fields_desc = [
         LEShortEnumField("command_id", None, {
             0x0004: "ListServices",
@@ -116,14 +116,14 @@ class ENIP_TCP(Packet):
         return p + pay
 
 
-bind_layers(TCP, ENIP_TCP, dport=44818)
-bind_layers(TCP, ENIP_TCP, sport=44818)
+bind_layers(TCP, EnipTCP, dport=44818)
+bind_layers(TCP, EnipTCP, sport=44818)
 
-bind_layers(ENIP_TCP, ENIP_RegisterSession, command_id=0x0065)
-bind_layers(ENIP_TCP, ENIP_SendRRData, command_id=0x006f)
-bind_layers(ENIP_TCP, ENIP_SendUnitData, command_id=0x0070)
-bind_layers(ENIP_SendUnitData_Item, ENIP_ConnectionAddress, type_id=0x00a1)
-bind_layers(ENIP_SendUnitData_Item, ENIP_ConnectionPacket, type_id=0x00b1)
+bind_layers(EnipTCP, EnipRegisterSession, command_id=0x0065)
+bind_layers(EnipTCP, EnipSendRRData, command_id=0x006f)
+bind_layers(EnipTCP, EnipSendUnitData, command_id=0x0070)
+bind_layers(EnipSendUnitData_Item, EnipConnectionAddress, type_id=0x00a1)
+bind_layers(EnipSendUnitData_Item, EnipConnectionPacket, type_id=0x00b1)
 
 if __name__ == '__main__':
     # Test building/dissecting packets
@@ -131,10 +131,10 @@ if __name__ == '__main__':
     pkt = Ether(src='01:23:45:67:89:ab', dst='ba:98:76:54:32:10')
     pkt /= IP(src='192.168.1.1', dst='192.168.1.42')
     pkt /= TCP(sport=10000, dport=44818)
-    pkt /= ENIP_TCP()
-    pkt /= ENIP_SendUnitData(items=[
-        ENIP_SendUnitData_Item() / ENIP_ConnectionAddress(connection_id=1337),
-        ENIP_SendUnitData_Item() / ENIP_ConnectionPacket(sequence=4242) / Raw(load='test'),
+    pkt /= EnipTCP()
+    pkt /= EnipSendUnitData(items=[
+        EnipSendUnitData_Item() / EnipConnectionAddress(connection_id=1337),
+        EnipSendUnitData_Item() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
     ])
 
     # Build!
@@ -143,17 +143,17 @@ if __name__ == '__main__':
     pkt.show()
 
     # Test the value of some fields
-    assert pkt[ENIP_TCP].command_id == 0x70
-    assert pkt[ENIP_TCP].session == 0
-    assert pkt[ENIP_TCP].status == 0
-    assert pkt[ENIP_TCP].length == 26
-    assert pkt[ENIP_SendUnitData].count == 2
-    assert pkt[ENIP_SendUnitData].items[0].type_id == 0x00a1
-    assert pkt[ENIP_SendUnitData].items[0].length == 4
-    assert pkt[ENIP_SendUnitData].items[0].payload == pkt[ENIP_ConnectionAddress]
-    assert pkt[ENIP_ConnectionAddress].connection_id == 1337
-    assert pkt[ENIP_SendUnitData].items[1].type_id == 0x00b1
-    assert pkt[ENIP_SendUnitData].items[1].length == 6
-    assert pkt[ENIP_SendUnitData].items[1].payload == pkt[ENIP_ConnectionPacket]
-    assert pkt[ENIP_ConnectionPacket].sequence == 4242
-    assert pkt[ENIP_ConnectionPacket].payload.load == 'test'
+    assert pkt[EnipTCP].command_id == 0x70
+    assert pkt[EnipTCP].session == 0
+    assert pkt[EnipTCP].status == 0
+    assert pkt[EnipTCP].length == 26
+    assert pkt[EnipSendUnitData].count == 2
+    assert pkt[EnipSendUnitData].items[0].type_id == 0x00a1
+    assert pkt[EnipSendUnitData].items[0].length == 4
+    assert pkt[EnipSendUnitData].items[0].payload == pkt[EnipConnectionAddress]
+    assert pkt[EnipConnectionAddress].connection_id == 1337
+    assert pkt[EnipSendUnitData].items[1].type_id == 0x00b1
+    assert pkt[EnipSendUnitData].items[1].length == 6
+    assert pkt[EnipSendUnitData].items[1].payload == pkt[EnipConnectionPacket]
+    assert pkt[EnipConnectionPacket].sequence == 4242
+    assert pkt[EnipConnectionPacket].payload.load == 'test'
