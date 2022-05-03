@@ -22,7 +22,7 @@ from struct import pack
 
 from scapy.all import Packet, LEShortEnumField, LEShortField, LEIntField, LEIntEnumField, LongField
 
-from enip_constants import commands, statuses
+from scapy_enip.enip_constants import commands, statuses
 from scapy_cip_enip_common.test_utils import AssertRaises
 
 
@@ -47,12 +47,13 @@ class Enip(Packet):
         return p + pay
 
 
-def run_tests():
+def run_tests(verbose: bool = True):
     # Dissection test
     original_data = b'\x6f\x00\x16\x00\x10\x20\x30\x40\x00\x00\x00\x00\x01\x02' \
                     b'\x03\x04\x05\x06\x07\x08\x00\x00\x00\x00'
     pkt = Enip(original_data)
-    print(repr(pkt))
+    if verbose:
+        print(repr(pkt))
     assert(pkt.command_id == 0x006f)
     assert(pkt.length == 0x16)
     assert(pkt.session == 0x40302010)

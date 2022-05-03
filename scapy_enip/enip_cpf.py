@@ -23,7 +23,7 @@ import struct
 
 from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, bind_layers
 
-from enip_constants import cpf_item_ids
+from scapy_enip.enip_constants import cpf_item_ids
 
 
 class CpfConnectionAddress(Packet):

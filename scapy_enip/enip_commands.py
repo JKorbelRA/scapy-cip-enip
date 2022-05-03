@@ -22,9 +22,9 @@ from struct import pack
 
 from scapy.all import Packet, LEIntField, LEShortField, PacketListField, bind_layers
 
-from enip import Enip
+from scapy_enip.enip import Enip
+from scapy_enip.enip_cpf import CpfItem
 import scapy_cip_enip_common.utils as utils
-from enip_cpf import CpfItem
 
 
 class EnipSendUnitData(Packet):

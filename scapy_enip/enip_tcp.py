@@ -23,16 +23,16 @@ import struct
 
 from scapy.all import bind_layers, Ether, IP, TCP, Raw
 
-from enip import Enip
-from enip_commands import EnipSendUnitData
-from enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress
+from scapy_enip.enip import Enip
+from scapy_enip.enip_commands import EnipSendUnitData
+from scapy_enip.enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress
 
 
 bind_layers(TCP, Enip, dport=44818)
 bind_layers(TCP, Enip, sport=44818)
 
 
-def run_tests():
+def run_tests(verbose: bool = True):
     # Test building/dissecting packets
     # Build a raw packet over ENIP
     pkt = Ether(src='01:23:45:67:89:ab', dst='ba:98:76:54:32:10')
@@ -47,7 +47,8 @@ def run_tests():
     # Build!
     data = bytes(pkt)
     pkt = Ether(data)
-    pkt.show()
+    if verbose:
+        pkt.show()
 
     # Test the value of some fields
     assert pkt[Enip].command_id == 0x70

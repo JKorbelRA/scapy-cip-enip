@@ -35,7 +35,7 @@ from scapy.all import Packet, StrField, LEShortField, StrLenField, FieldListFiel
     PacketField, X3BytesField, PacketLenField, bind_layers
 
 import scapy_cip_enip_common.utils as utils
-import scapy_enip.enip_tcp as enip_tcp
+from scapy_enip.enip_cpf import CpfConnectedTransportPacket, CpfItem
 
 
 class CipRespSingleAttribute(Packet):
@@ -559,8 +559,8 @@ class CipReqConnectionManager(Packet):
         return p + pay
 
 
-bind_layers(enip_tcp.EnipConnectionPacket, CIP)
-bind_layers(enip_tcp.EnipSendUnitDataItem, CIP, type_id=0x00b2)
+bind_layers(CpfConnectedTransportPacket, CIP)
+bind_layers(CpfItem, CIP, type_id=0x00b2)
 
 bind_layers(CIP, CipRespAttributesAll, direction=1, service=0x01)
 bind_layers(CIP, CipReqGetAttributeList, direction=0, service=0x03)
@@ -577,21 +577,23 @@ bind_layers(CIP, CipRespForwardOpen, direction=1, service=0x54)
 bind_layers(CIP, CipReqConnectionManager, direction=0, service=0x52)
 
 
-def run_tests():
+def run_tests(verbose: bool = True):
     # Test building/dissecting packets
     # Build a CIP Get Attribute All request
     path = CipPath.make(class_id=1, instance_id=1)
     assert bytes(path) == b"\x03\x20\x01\x25\x00\x01\x00"
     pkt = CIP(service=1, path=path)
     pkt = CIP(bytes(pkt))
-    pkt.show()
+    if verbose:
+        pkt.show()
     assert pkt[CIP].direction == 0
     assert pkt[CIP].path[0] == path
 
     # Build a CIP Get_Attribute_List response
     pkt = CIP() / CipRespAttributesList(count=1, content="test")
     pkt = CIP(bytes(pkt))
-    pkt.show()
+    if verbose:
+        pkt.show()
     assert pkt[CIP].direction == 1
     assert pkt[CIP].service == 0x03
     assert pkt[CIP].status[0].reserved == 0
@@ -609,7 +611,8 @@ def run_tests():
         CIP(service=0x0e, path=CipPath.make(class_id=0x8e, instance_id=1, attribute_id=0x1b)),
     ])
     pkt = CIP(bytes(pkt))
-    pkt.show()
+    if verbose:
+        pkt.show()
     assert pkt[CIP].direction == 0
     assert pkt[CIP].service == 0x0a
     assert pkt[CIP].path[0] == CipPath.make(class_id=2, instance_id=1)

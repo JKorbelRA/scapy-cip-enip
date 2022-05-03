@@ -27,9 +27,9 @@ in SUTD's secure water treatment testbed.
 from scapy.all import Ether, IP, UDP, Raw, bind_layers, Packet, PacketListField
 
 import scapy_cip_enip_common.utils as utils
-from enip import Enip
-from enip_commands import EnipSendUnitData
-from enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress, CpfSequencedAddress
+from scapy_enip.enip import Enip
+from scapy_enip.enip_commands import EnipSendUnitData
+from scapy_enip.enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress, CpfSequencedAddress
 
 # ConnectedTransportPacket payload for ENIP UDP_KEEP_ALIVE
 ENIP_UDP_KEEPALIVE = (
@@ -56,7 +56,7 @@ bind_layers(UDP, Enip, sport=44818)
 bind_layers(UDP, EnipUDP, sport=2222, dport=2222)
 
 
-def keep_alive_test():
+def keep_alive_test(verbose: bool):
     # Test building/dissecting packets
     # Build a keep-alive packet
     pkt = Ether(src='00:1d:9c:c8:13:37', dst='01:00:5e:40:12:34')
@@ -70,7 +70,8 @@ def keep_alive_test():
     # Build!
     data = bytes(pkt)
     pkt = Ether(data)
-    pkt.show()
+    if verbose:
+        pkt.show()
 
     # Test the value of some fields
     assert pkt[EnipUDP].count == 2
@@ -84,8 +85,8 @@ def keep_alive_test():
     assert pkt[EnipUDP].items[1].payload.load == ENIP_UDP_KEEPALIVE
 
 
-def run_tests():
-    keep_alive_test()
+def run_tests(verbose: bool = True):
+    keep_alive_test(verbose)
 
     # Test building/dissecting packets
     # Build a raw packet over ENIP
@@ -101,7 +102,8 @@ def run_tests():
     # Build!
     data = bytes(pkt)
     pkt = Ether(data)
-    pkt.show()
+    if verbose:
+        pkt.show()
 
     # Test the value of some fields
     assert pkt[Enip].command_id == 0x70
