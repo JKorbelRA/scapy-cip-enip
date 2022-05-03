@@ -24,28 +24,31 @@ import struct
 from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, PacketListField, \
     bind_layers
 
-import scapy_cip_enip_common.utils as utils
+from enip_constants import cpf_item_ids
 
 
-class CpfSequencedAddressItem(Packet):
-    name = "CpfSequencedAddressItem"
+class CpfConnectionAddress(Packet):
+    name = "CpfConnectionAddress"
+    fields_desc = [LEIntField("connection_id", 0)]
+
+
+class CpfConnectedTransportPacket(Packet):
+    name = "CpfConnectedTransportPacket"
+    fields_desc = [LEShortField("sequence", 0)]
+
+
+class CpfSequencedAddress(Packet):
+    name = "CpfSequencedAddress"
     fields_desc = [
         LEIntField("connection_id", 0),
         LEIntField("sequence_number", 0),
     ]
 
 
-class CpfAddressDataItem(Packet):
-    name = "CpfAddressDataItem"
+class CpfItem(Packet):
+    name = "CpfItem"
     fields_desc = [
-        LEShortEnumField('type_id', 0, {
-            0x0000: "Null Address",
-            0x00a1: "Connection-based Address",
-            0x00b1: "Connected Transport Packet",
-            0x00b2: "Unconnected Message",
-            0x0100: "ListServices response",
-            0x8002: 'Sequenced Address Item',
-        }),
+        LEShortEnumField('type_id', 0, cpf_item_ids),
         LEShortField("length", None),
     ]
 
@@ -54,21 +57,10 @@ class CpfAddressDataItem(Packet):
 
     def post_build(self, p, pay):
         if self.length is None and pay:
-            l = len(pay)
-            p = p[:2] + struct.pack("<H", l) + p[4:]
+            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
         return p + pay
 
 
-class EnipCPF(Packet):
-    name = "ENIP_CPF"
-    fields_desc = [
-        utils.LEShortLenField("count", 2, count_of="items"),
-        PacketListField("items", [CpfAddressDataItem(b'', 0, 0), CpfAddressDataItem(b'', 0, 0)],
-                        CpfAddressDataItem, count_from=lambda p: p.count),
-    ]
-
-    def extract_padding(self, p):
-        return '', p
-
-
-bind_layers(CpfAddressDataItem, CpfSequencedAddressItem, type_id=0x8002)
+bind_layers(CpfItem, CpfConnectionAddress, type_id=0x00a1)
+bind_layers(CpfItem, CpfConnectedTransportPacket, type_id=0x00b1)
+bind_layers(CpfItem, CpfSequencedAddress, type_id=0x8002)

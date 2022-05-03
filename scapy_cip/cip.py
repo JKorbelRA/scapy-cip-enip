@@ -218,7 +218,7 @@ class CipPath(Packet):
     ]
 
     def extract_padding(self, p):
-        return "", p
+        return b"", p
 
     @classmethod
     def make(cls, class_id=None, instance_id=None, member_id=None, attribute_id=None):
@@ -324,7 +324,7 @@ class CipResponseStatus(Packet):
     }
 
     def extract_padding(self, p):
-        return "", p
+        return b"", p
 
     def __repr__(self):
         if self.reserved != 0:
@@ -453,7 +453,7 @@ class CipConnectionParam(Packet):
         return p
 
     def extract_padding(self, s):
-        return '', s
+        return b'', s
 
 
 class CipReqForwardOpen(Packet):

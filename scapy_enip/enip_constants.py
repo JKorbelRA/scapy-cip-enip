@@ -41,3 +41,18 @@ statuses = {
     0x69: "UnsupportedProtocolVersion",
     0x6A: "CipServiceNotAllowed"
 }
+
+cpf_item_ids = {
+    0: "NullAddress",
+    0xC: "CipIdentity",
+    0x86: "CipSecurityInfo",
+    0x87: "EnipCapability",
+    0xa1: "ConnectionBasedAddress",
+    0xb1: "ConnectedTransportPacket",
+    0xb2: "UnconnectedMessage",
+    0x100: "ListServicesResponse",
+    0x8000: "SockaddrInfoOrigToTgt",  # Originator to target.
+    0x8001: "SockaddrInfoTgtToOrig",  # Target to originator.
+    0x8002: 'SequencedAddressItem',
+    0x8003: "UnconnectedMessageUdp"
+}

@@ -23,50 +23,19 @@
 This dissector only supports a "keep-alive" kind of packet which has been seen
 in SUTD's secure water treatment testbed.
 """
-import struct
 
-from scapy.all import Ether, IP, UDP, Raw, bind_layers, Packet, LEIntField, LEShortField, \
-    LEShortEnumField, PacketListField
+from scapy.all import Ether, IP, UDP, Raw, bind_layers, Packet, PacketListField
 
 import scapy_cip_enip_common.utils as utils
 from enip import Enip
-from enip_commands import EnipSendUnitData, EnipSendUnitDataItem, EnipConnectionAddress, \
-    EnipConnectionPacket
+from enip_commands import EnipSendUnitData
+from enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress, CpfSequencedAddress
 
-# Keep-alive sequences
+# ConnectedTransportPacket payload for ENIP UDP_KEEP_ALIVE
 ENIP_UDP_KEEPALIVE = (
-        b'\x01\x00\xff\xff\xff\xff' +
-        b'\xff\xff\xff\xff\x00\x00\x00\x00' +
-        b'\xff\xff\xff\xff\x00\x00\x00\x00' +
-        b'\xff\xff\xff\xff\x00\x00\x00\x00' +
-        b'\xff\xff\xff\xff\x00\x00\x00\x00')
-
-
-class EnipUdpSequencedAddress(Packet):
-    name = "EnipUdpSequencedAddress"
-    fields_desc = [
-        LEIntField("connection_id", 0),
-        LEIntField("sequence", 0),
-    ]
-
-
-class EnipUdpItem(Packet):
-    name = "EnipUdpItem"
-    fields_desc = [
-        LEShortEnumField("type_id", 0, {
-            0x00b1: "Connected_Data_Item",
-            0x8002: "Sequenced_Address",
-        }),
-        LEShortField("length", None),
-    ]
-
-    def extract_padding(self, p):
-        return p[:self.length], p[self.length:]
-
-    def post_build(self, p, pay):
-        if self.length is None and pay:
-            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
-        return p + pay
+    b'\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00'
+    b'\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00'
+)
 
 
 class EnipUDP(Packet):
@@ -74,18 +43,17 @@ class EnipUDP(Packet):
     name = "EnipUDP"
     fields_desc = [
         utils.LEShortLenField("count", None, count_of="items"),
-        PacketListField("items", [], EnipUdpItem,
+        PacketListField("items", [], CpfItem,
                         count_from=lambda p: p.count),
     ]
 
     def extract_padding(self, p):
-        return "", p
+        return b"", p
 
 
 bind_layers(UDP, Enip, dport=44818)
 bind_layers(UDP, Enip, sport=44818)
 bind_layers(UDP, EnipUDP, sport=2222, dport=2222)
-bind_layers(EnipUdpItem, EnipUdpSequencedAddress, type_id=0x8002)
 
 
 def keep_alive_test():
@@ -95,8 +63,8 @@ def keep_alive_test():
     pkt /= IP(src='192.168.1.42', dst='239.192.18.52')
     pkt /= UDP(sport=2222, dport=2222)
     pkt /= EnipUDP(items=[
-        EnipUdpItem() / EnipUdpSequencedAddress(connection_id=1337, sequence=42),
-        EnipUdpItem(type_id=0x00b1) / Raw(load=ENIP_UDP_KEEPALIVE),
+        CpfItem() / CpfSequencedAddress(connection_id=1337, sequence_number=42),
+        CpfItem(type_id=0x00b1) / Raw(load=ENIP_UDP_KEEPALIVE),
     ])
 
     # Build!
@@ -108,11 +76,11 @@ def keep_alive_test():
     assert pkt[EnipUDP].count == 2
     assert pkt[EnipUDP].items[0].type_id == 0x8002
     assert pkt[EnipUDP].items[0].length == 8
-    assert pkt[EnipUDP].items[0].payload == pkt[EnipUdpSequencedAddress]
-    assert pkt[EnipUdpSequencedAddress].connection_id == 1337
-    assert pkt[EnipUdpSequencedAddress].sequence == 42
+    assert pkt[EnipUDP].items[0].payload == pkt[CpfSequencedAddress]
+    assert pkt[CpfSequencedAddress].connection_id == 1337
+    assert pkt[CpfSequencedAddress].sequence_number == 42
     assert pkt[EnipUDP].items[1].type_id == 0x00b1
-    assert pkt[EnipUDP].items[1].length == 38
+    assert pkt[EnipUDP].items[1].length == 36
     assert pkt[EnipUDP].items[1].payload.load == ENIP_UDP_KEEPALIVE
 
 
@@ -126,8 +94,8 @@ def run_tests():
     pkt /= UDP(sport=10000, dport=44818)
     pkt /= Enip()
     pkt /= EnipSendUnitData(items=[
-        EnipSendUnitDataItem() / EnipConnectionAddress(connection_id=1337),
-        EnipSendUnitDataItem() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
+        CpfItem() / CpfConnectionAddress(connection_id=1337),
+        CpfItem() / CpfConnectedTransportPacket(sequence=4242) / Raw(load='test'),
     ])
 
     # Build!
@@ -143,13 +111,13 @@ def run_tests():
     assert pkt[EnipSendUnitData].count == 2
     assert pkt[EnipSendUnitData].items[0].type_id == 0x00a1
     assert pkt[EnipSendUnitData].items[0].length == 4
-    assert pkt[EnipSendUnitData].items[0].payload == pkt[EnipConnectionAddress]
-    assert pkt[EnipConnectionAddress].connection_id == 1337
+    assert pkt[EnipSendUnitData].items[0].payload == pkt[CpfConnectionAddress]
+    assert pkt[CpfConnectionAddress].connection_id == 1337
     assert pkt[EnipSendUnitData].items[1].type_id == 0x00b1
     assert pkt[EnipSendUnitData].items[1].length == 6
-    assert pkt[EnipSendUnitData].items[1].payload == pkt[EnipConnectionPacket]
-    assert pkt[EnipConnectionPacket].sequence == 4242
-    assert pkt[EnipConnectionPacket].payload.load == b'test'
+    assert pkt[EnipSendUnitData].items[1].payload == pkt[CpfConnectedTransportPacket]
+    assert pkt[CpfConnectedTransportPacket].sequence == 4242
+    assert pkt[CpfConnectedTransportPacket].payload.load == b'test'
 
 
 if __name__ == '__main__':

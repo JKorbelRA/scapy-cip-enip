@@ -24,8 +24,8 @@ import struct
 from scapy.all import bind_layers, Ether, IP, TCP, Raw
 
 from enip import Enip
-from enip_commands import EnipSendUnitData, EnipSendUnitDataItem, EnipConnectionAddress, \
-    EnipConnectionPacket
+from enip_commands import EnipSendUnitData
+from enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress
 
 
 bind_layers(TCP, Enip, dport=44818)
@@ -40,8 +40,8 @@ def run_tests():
     pkt /= TCP(sport=10000, dport=44818)
     pkt /= Enip()
     pkt /= EnipSendUnitData(items=[
-        EnipSendUnitDataItem() / EnipConnectionAddress(connection_id=1337),
-        EnipSendUnitDataItem() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
+        CpfItem() / CpfConnectionAddress(connection_id=1337),
+        CpfItem() / CpfConnectedTransportPacket(sequence=4242) / Raw(load='test'),
     ])
 
     # Build!
@@ -57,13 +57,13 @@ def run_tests():
     assert pkt[EnipSendUnitData].count == 2
     assert pkt[EnipSendUnitData].items[0].type_id == 0x00a1
     assert pkt[EnipSendUnitData].items[0].length == 4
-    assert pkt[EnipSendUnitData].items[0].payload == pkt[EnipConnectionAddress]
-    assert pkt[EnipConnectionAddress].connection_id == 1337
+    assert pkt[EnipSendUnitData].items[0].payload == pkt[CpfConnectionAddress]
+    assert pkt[CpfConnectionAddress].connection_id == 1337
     assert pkt[EnipSendUnitData].items[1].type_id == 0x00b1
     assert pkt[EnipSendUnitData].items[1].length == 6
-    assert pkt[EnipSendUnitData].items[1].payload == pkt[EnipConnectionPacket]
-    assert pkt[EnipConnectionPacket].sequence == 4242
-    assert pkt[EnipConnectionPacket].payload.load == b'test'
+    assert pkt[EnipSendUnitData].items[1].payload == pkt[CpfConnectedTransportPacket]
+    assert pkt[CpfConnectedTransportPacket].sequence == 4242
+    assert pkt[CpfConnectedTransportPacket].payload.load == b'test'
 
 
 if __name__ == '__main__':
