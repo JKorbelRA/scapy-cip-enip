@@ -20,7 +20,8 @@
 
 from struct import pack
 
-from scapy.all import Packet, LEShortEnumField, LEShortField, LEIntField, LEIntEnumField, LongField
+from scapy.all import Packet, LEShortEnumField, LEShortField, LEIntField, LEIntEnumField, \
+    LongField, TCP, bind_layers, UDP
 
 from scapy_enip.enip_constants import commands, statuses
 from scapy_cip_enip_common.test_utils import AssertRaises
@@ -102,6 +103,12 @@ def run_tests(verbose: bool = True):
 
     with AssertRaises(KeyError):
         Enip(status="UndefinedStatusConstant")
+
+
+bind_layers(TCP, Enip, dport=44818)
+bind_layers(TCP, Enip, sport=44818)
+bind_layers(UDP, Enip, dport=44818)
+bind_layers(UDP, Enip, sport=44818)
 
 
 if __name__ == '__main__':

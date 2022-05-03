@@ -51,8 +51,6 @@ class EnipUDP(Packet):
         return b"", p
 
 
-bind_layers(UDP, Enip, dport=44818)
-bind_layers(UDP, Enip, sport=44818)
 bind_layers(UDP, EnipUDP, sport=2222, dport=2222)
 
 

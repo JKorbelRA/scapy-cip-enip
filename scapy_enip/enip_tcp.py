@@ -28,10 +28,6 @@ from scapy_enip.enip_commands import EnipSendUnitData
 from scapy_enip.enip_cpf import CpfItem, CpfConnectedTransportPacket, CpfConnectionAddress
 
 
-bind_layers(TCP, Enip, dport=44818)
-bind_layers(TCP, Enip, sport=44818)
-
-
 def run_tests(verbose: bool = True):
     # Test building/dissecting packets
     # Build a raw packet over ENIP
