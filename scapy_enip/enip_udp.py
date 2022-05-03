@@ -29,6 +29,9 @@ from scapy.all import Ether, IP, UDP, Raw, bind_layers, Packet, LEIntField, LESh
     LEShortEnumField, PacketListField
 
 import scapy_cip_enip_common.utils as utils
+from enip import Enip
+from enip_commands import EnipSendUnitData, EnipSendUnitDataItem, EnipConnectionAddress, \
+    EnipConnectionPacket
 
 # Keep-alive sequences
 ENIP_UDP_KEEPALIVE = (
@@ -79,11 +82,13 @@ class EnipUDP(Packet):
         return "", p
 
 
+bind_layers(UDP, Enip, dport=44818)
+bind_layers(UDP, Enip, sport=44818)
 bind_layers(UDP, EnipUDP, sport=2222, dport=2222)
 bind_layers(EnipUdpItem, EnipUdpSequencedAddress, type_id=0x8002)
 
 
-def run_tests():
+def keep_alive_test():
     # Test building/dissecting packets
     # Build a keep-alive packet
     pkt = Ether(src='00:1d:9c:c8:13:37', dst='01:00:5e:40:12:34')
@@ -109,6 +114,42 @@ def run_tests():
     assert pkt[EnipUDP].items[1].type_id == 0x00b1
     assert pkt[EnipUDP].items[1].length == 38
     assert pkt[EnipUDP].items[1].payload.load == ENIP_UDP_KEEPALIVE
+
+
+def run_tests():
+    keep_alive_test()
+
+    # Test building/dissecting packets
+    # Build a raw packet over ENIP
+    pkt = Ether(src='01:23:45:67:89:ab', dst='ba:98:76:54:32:10')
+    pkt /= IP(src='192.168.1.1', dst='192.168.1.42')
+    pkt /= UDP(sport=10000, dport=44818)
+    pkt /= Enip()
+    pkt /= EnipSendUnitData(items=[
+        EnipSendUnitDataItem() / EnipConnectionAddress(connection_id=1337),
+        EnipSendUnitDataItem() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
+    ])
+
+    # Build!
+    data = bytes(pkt)
+    pkt = Ether(data)
+    pkt.show()
+
+    # Test the value of some fields
+    assert pkt[Enip].command_id == 0x70
+    assert pkt[Enip].session == 0
+    assert pkt[Enip].status == 0
+    assert pkt[Enip].length == 26
+    assert pkt[EnipSendUnitData].count == 2
+    assert pkt[EnipSendUnitData].items[0].type_id == 0x00a1
+    assert pkt[EnipSendUnitData].items[0].length == 4
+    assert pkt[EnipSendUnitData].items[0].payload == pkt[EnipConnectionAddress]
+    assert pkt[EnipConnectionAddress].connection_id == 1337
+    assert pkt[EnipSendUnitData].items[1].type_id == 0x00b1
+    assert pkt[EnipSendUnitData].items[1].length == 6
+    assert pkt[EnipSendUnitData].items[1].payload == pkt[EnipConnectionPacket]
+    assert pkt[EnipConnectionPacket].sequence == 4242
+    assert pkt[EnipConnectionPacket].payload.load == b'test'
 
 
 if __name__ == '__main__':

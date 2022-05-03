@@ -23,7 +23,7 @@ from struct import pack
 from scapy.all import Packet, LEShortEnumField, LEShortField, LEIntField, LEIntEnumField, LongField
 
 from enip_constants import commands, statuses
-from _test_utils import AssertRaises
+from scapy_cip_enip_common.test_utils import AssertRaises
 
 
 class Enip(Packet):

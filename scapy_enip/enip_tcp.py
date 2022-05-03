@@ -21,108 +21,15 @@
 """Ethernet/IP over TCP scapy dissector"""
 import struct
 
-from scapy.all import Packet, LEIntField, LEShortField, LEShortEnumField, PacketListField, \
-    LEIntEnumField, LELongField, bind_layers, Ether, IP, TCP, Raw
+from scapy.all import bind_layers, Ether, IP, TCP, Raw
 
-import scapy_cip_enip_common.utils as utils
-
-
-class EnipConnectionAddress(Packet):
-    name = "EnipConnectionAddress"
-    fields_desc = [LEIntField("connection_id", 0)]
+from enip import Enip
+from enip_commands import EnipSendUnitData, EnipSendUnitDataItem, EnipConnectionAddress, \
+    EnipConnectionPacket
 
 
-class EnipConnectionPacket(Packet):
-    name = "EnipConnectionPacket"
-    fields_desc = [LEShortField("sequence", 0)]
-
-
-class EnipSendUnitDataItem(Packet):
-    name = "EnipSendUnitDataItem"
-    fields_desc = [
-        LEShortEnumField("type_id", 0, {
-            0x0000: "null_address",  # NULL Address
-            0x00a1: "conn_address",  # Address for connection based requests
-            0x00b1: "conn_packet",  # Connected Transport packet
-            0x00b2: "unconn_message",
-            # Unconnected Messages (eg. used within CIP command SendRRData)
-            0x0100: "listservices_response",  # ListServices response
-        }),
-        LEShortField("length", None),
-    ]
-
-    def extract_padding(self, p):
-        return p[:self.length], p[self.length:]
-
-    def post_build(self, p, pay):
-        if self.length is None and pay:
-            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
-        return p + pay
-
-
-class EnipSendUnitData(Packet):
-    """Data in ENIP header specific to the specified command"""
-    name = "EnipSendUnitData"
-    fields_desc = [
-        LEIntField("interface_handle", 0),
-        LEShortField("timeout", 0),
-        utils.LEShortLenField("count", None, count_of="items"),
-        PacketListField("items", [], EnipSendUnitDataItem,
-                        count_from=lambda p: p.count),
-    ]
-
-
-class EnipSendRRData(Packet):
-    name = "EnipSendRRData"
-    fields_desc = EnipSendUnitData.fields_desc
-
-
-class EnipRegisterSession(Packet):
-    name = "EnipRegisterSession"
-    fields_desc = [
-        LEShortField("protocol_version", 1),
-        LEShortField("options", 0),
-    ]
-
-
-class EnipTCP(Packet):
-    """Ethernet/IP packet over TCP"""
-    name = "EnipTCP"
-    fields_desc = [
-        LEShortEnumField("command_id", 0, {
-            0x0000: "NOP",
-            0x0004: "ListServices",
-            0x0063: "ListIdentity",
-            0x0064: "ListInterfaces",
-            0x0065: "RegisterSession",
-            0x0066: "UnregisterSession",
-            0x006f: "SendRRData",  # Send Request/Reply data
-            0x0070: "SendUnitData",
-        }),
-        LEShortField("length", None),
-        LEIntField("session", 0),
-        LEIntEnumField("status", 0, {0: "success"}),
-        LELongField("sender_context", 0),
-        LEIntField("options", 0),
-    ]
-
-    def extract_padding(self, p):
-        return p[:self.length], p[self.length:]
-
-    def post_build(self, p, pay):
-        if self.length is None and pay:
-            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
-        return p + pay
-
-
-bind_layers(TCP, EnipTCP, dport=44818)
-bind_layers(TCP, EnipTCP, sport=44818)
-
-bind_layers(EnipTCP, EnipRegisterSession, command_id=0x0065)
-bind_layers(EnipTCP, EnipSendRRData, command_id=0x006f)
-bind_layers(EnipTCP, EnipSendUnitData, command_id=0x0070)
-bind_layers(EnipSendUnitDataItem, EnipConnectionAddress, type_id=0x00a1)
-bind_layers(EnipSendUnitDataItem, EnipConnectionPacket, type_id=0x00b1)
+bind_layers(TCP, Enip, dport=44818)
+bind_layers(TCP, Enip, sport=44818)
 
 
 def run_tests():
@@ -131,7 +38,7 @@ def run_tests():
     pkt = Ether(src='01:23:45:67:89:ab', dst='ba:98:76:54:32:10')
     pkt /= IP(src='192.168.1.1', dst='192.168.1.42')
     pkt /= TCP(sport=10000, dport=44818)
-    pkt /= EnipTCP()
+    pkt /= Enip()
     pkt /= EnipSendUnitData(items=[
         EnipSendUnitDataItem() / EnipConnectionAddress(connection_id=1337),
         EnipSendUnitDataItem() / EnipConnectionPacket(sequence=4242) / Raw(load='test'),
@@ -143,10 +50,10 @@ def run_tests():
     pkt.show()
 
     # Test the value of some fields
-    assert pkt[EnipTCP].command_id == 0x70
-    assert pkt[EnipTCP].session == 0
-    assert pkt[EnipTCP].status == 0
-    assert pkt[EnipTCP].length == 26
+    assert pkt[Enip].command_id == 0x70
+    assert pkt[Enip].session == 0
+    assert pkt[Enip].status == 0
+    assert pkt[Enip].length == 26
     assert pkt[EnipSendUnitData].count == 2
     assert pkt[EnipSendUnitData].items[0].type_id == 0x00a1
     assert pkt[EnipSendUnitData].items[0].length == 4
