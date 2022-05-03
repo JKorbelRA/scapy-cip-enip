@@ -21,8 +21,7 @@
 """Ethernet/IP Common Packet Format Scapy dissector."""
 import struct
 
-from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, PacketListField, \
-    bind_layers
+from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, bind_layers
 
 from enip_constants import cpf_item_ids
 
