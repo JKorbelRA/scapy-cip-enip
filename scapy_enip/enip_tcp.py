@@ -60,7 +60,7 @@ def run_tests(verbose: bool = True):
     assert pkt[EnipSendUnitData].items[1].length == 6
     assert pkt[EnipSendUnitData].items[1].payload == pkt[CpfConnectedTransportPacket]
     assert pkt[CpfConnectedTransportPacket].sequence == 4242
-    assert pkt[CpfConnectedTransportPacket].payload.load == b'test'
+    assert bytes(pkt[CpfConnectedTransportPacket].payload) == b'test'
 
 
 if __name__ == '__main__':

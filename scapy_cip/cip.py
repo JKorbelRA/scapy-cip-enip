@@ -28,6 +28,7 @@ https://code.wireshark.org/review/gitweb?p=wireshark.git;a=blob;f=epan/dissector
 """
 import struct
 import sys
+from typing import Any
 
 from hexdump import hexdump
 from scapy.all import Packet, StrField, LEShortField, StrLenField, FieldListField, ByteField, \
@@ -158,24 +159,24 @@ class CipPathField(StrLenField):
     }
 
     @classmethod
-    def to_tuplelist(cls, val):
+    def to_tuplelist(cls, val: bytes) -> list[tuple[int, Any]]:
         """Return a list of tuples describing the content of the path encoded in val"""
-        if ord(val[0]) == 0x91:
-            # "ANSI Extended Symbolic", the path is a string
+        if val[0] == 0x91:
+            # "ANSI Extended Symbol Segment" -> the path is a string
             # Don't check the second byte, which is the length (in bytes) of the strings.
-            return {-1: val[2:].rstrip("\0")}
+            return [(-1, val[2:].rstrip(b"\0"))]
 
         pos = 0
         result = []
         while pos < len(val):
-            header = struct.unpack('B', val[pos])[0]
+            header = val[pos]
             pos += 1
             if (header & 0xe0) != 0x20:  # 001 high bits is "Logical Segment"
                 sys.stderr.write("WARN: unknown segment class of 0x{:02x}\n".format(header))
 
             seg_format = header & 3
             if seg_format == 0:  # 8-bit segment
-                seg_value = struct.unpack('B', val[pos])[0]
+                seg_value = val[pos]
                 pos += 1
             elif seg_format == 1:  # 16-bit segment
                 seg_value = struct.unpack('<H', val[pos + 1:pos + 3])[0]
@@ -372,17 +373,17 @@ class CIP(Packet):
     }
 
     fields_desc = [
-        BitEnumField("direction", None, 1, {0: "request", 1: "response"}),
+        BitEnumField("req_resp", None, 1, {0: "request", 1: "response"}),
         utils.XBitEnumField("service", 0, 7, SERVICE_CODES),
         PacketListField("path", [], CipPath,
-                        count_from=lambda p: 1 if p.direction == 0 else 0),
+                        count_from=lambda p: 1 if p.req_resp == 0 else 0),
         PacketListField("status", [], CipResponseStatus,
-                        count_from=lambda p: 1 if p.direction == 1 else 0),
+                        count_from=lambda p: 1 if p.req_resp == 1 else 0),
     ]
 
     def post_build(self, p, pay):
-        is_response = (self.direction == 1)
-        if self.direction is None and not self.path:
+        is_response = (self.req_resp == 1)
+        if self.req_resp is None and not self.path:
             # Transform the packet into a response
             p = b"\x01" + p[1:]
             is_response = True
@@ -562,19 +563,19 @@ class CipReqConnectionManager(Packet):
 bind_layers(CpfConnectedTransportPacket, CIP)
 bind_layers(CpfItem, CIP, type_id=0x00b2)
 
-bind_layers(CIP, CipRespAttributesAll, direction=1, service=0x01)
-bind_layers(CIP, CipReqGetAttributeList, direction=0, service=0x03)
-bind_layers(CIP, CipRespAttributesList, direction=1, service=0x03)
+bind_layers(CIP, CipRespAttributesAll, req_resp=1, service=0x01)
+bind_layers(CIP, CipReqGetAttributeList, req_resp=0, service=0x03)
+bind_layers(CIP, CipRespAttributesList, req_resp=1, service=0x03)
 bind_layers(CIP, CipMultipleServicePacket, service=0x0a)
-bind_layers(CIP, CipRespSingleAttribute, direction=1, service=0x0e)
-bind_layers(CIP, CipReqReadOtherTag, direction=0, service=0x4c)
-bind_layers(CIP, CipReqReadOtherTag, direction=0, service=0x4f)
-bind_layers(CIP, CipReqForwardOpen, direction=0, service=0x54)
-bind_layers(CIP, CipRespForwardOpen, direction=1, service=0x54)
+bind_layers(CIP, CipRespSingleAttribute, req_resp=1, service=0x0e)
+bind_layers(CIP, CipReqReadOtherTag, req_resp=0, service=0x4c)
+bind_layers(CIP, CipReqReadOtherTag, req_resp=0, service=0x4f)
+bind_layers(CIP, CipReqForwardOpen, req_resp=0, service=0x54)
+bind_layers(CIP, CipRespForwardOpen, req_resp=1, service=0x54)
 
 # TODO: this is much imprecise :(
 # Need class in path to be 6 (Connection Manager)
-bind_layers(CIP, CipReqConnectionManager, direction=0, service=0x52)
+bind_layers(CIP, CipReqConnectionManager, req_resp=0, service=0x52)
 
 
 def run_tests(verbose: bool = True):
@@ -586,7 +587,7 @@ def run_tests(verbose: bool = True):
     pkt = CIP(bytes(pkt))
     if verbose:
         pkt.show()
-    assert pkt[CIP].direction == 0
+    assert pkt[CIP].req_resp == 0
     assert pkt[CIP].path[0] == path
 
     # Build a CIP Get_Attribute_List response
@@ -594,15 +595,15 @@ def run_tests(verbose: bool = True):
     pkt = CIP(bytes(pkt))
     if verbose:
         pkt.show()
-    assert pkt[CIP].direction == 1
+    assert pkt[CIP].req_resp == 1
     assert pkt[CIP].service == 0x03
     assert pkt[CIP].status[0].reserved == 0
     assert pkt[CIP].status[0].status == 0
     assert pkt[CIP].status[0].additional_size == 0
-    assert pkt[CIP].status[0].additional == ""
+    assert pkt[CIP].status[0].additional == b""
     assert pkt[CIP].payload == pkt[CipRespAttributesList]
     assert pkt[CipRespAttributesList].count == 1
-    assert pkt[CipRespAttributesList].content == "test"
+    assert pkt[CipRespAttributesList].content == b"test"
 
     # Build a Multiple Service Packet Request
     pkt = CIP(path=CipPath.make(class_id=2, instance_id=1))
@@ -613,7 +614,7 @@ def run_tests(verbose: bool = True):
     pkt = CIP(bytes(pkt))
     if verbose:
         pkt.show()
-    assert pkt[CIP].direction == 0
+    assert pkt[CIP].req_resp == 0
     assert pkt[CIP].service == 0x0a
     assert pkt[CIP].path[0] == CipPath.make(class_id=2, instance_id=1)
     assert pkt[CIP].payload == pkt[CipMultipleServicePacket]

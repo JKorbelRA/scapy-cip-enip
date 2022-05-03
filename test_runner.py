@@ -8,7 +8,7 @@ import scapy_enip.enip_udp
 if __name__ == "__main__":
     scapy_cip_enip_common.test_utils.run_tests()
 
-    scapy_cip.cip.run_tests(False)
     scapy_enip.enip.run_tests(False)
     scapy_enip.enip_tcp.run_tests(False)
     scapy_enip.enip_udp.run_tests(False)
+    scapy_cip.cip.run_tests(True)

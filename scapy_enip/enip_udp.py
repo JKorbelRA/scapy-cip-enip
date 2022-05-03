@@ -80,7 +80,7 @@ def keep_alive_test(verbose: bool):
     assert pkt[CpfSequencedAddress].sequence_number == 42
     assert pkt[EnipUDP].items[1].type_id == 0x00b1
     assert pkt[EnipUDP].items[1].length == 36
-    assert pkt[EnipUDP].items[1].payload.load == ENIP_UDP_KEEPALIVE
+    assert bytes(pkt[EnipUDP].items[1].payload) == ENIP_UDP_KEEPALIVE
 
 
 def run_tests(verbose: bool = True):
@@ -117,7 +117,7 @@ def run_tests(verbose: bool = True):
     assert pkt[EnipSendUnitData].items[1].length == 6
     assert pkt[EnipSendUnitData].items[1].payload == pkt[CpfConnectedTransportPacket]
     assert pkt[CpfConnectedTransportPacket].sequence == 4242
-    assert pkt[CpfConnectedTransportPacket].payload.load == b'test'
+    assert bytes(pkt[CpfConnectedTransportPacket].payload) == b'test'
 
 
 if __name__ == '__main__':
