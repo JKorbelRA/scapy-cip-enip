@@ -156,7 +156,7 @@ def run_tests():
     assert pkt[EnipSendUnitData].items[1].length == 6
     assert pkt[EnipSendUnitData].items[1].payload == pkt[EnipConnectionPacket]
     assert pkt[EnipConnectionPacket].sequence == 4242
-    assert pkt[EnipConnectionPacket].payload.load == 'test'
+    assert pkt[EnipConnectionPacket].payload.load == b'test'
 
 
 if __name__ == '__main__':
