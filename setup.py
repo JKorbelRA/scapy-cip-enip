@@ -12,5 +12,4 @@ setup(
     version='0.0.1',
     packages=['scapy_enip',
               'scapy_cip_enip_common', ],
-    install_requires=["scapy @ git+https://github.com/secdev/scapy.git",
-                      "hexdump"])
+    install_requires=["hexdump"])
