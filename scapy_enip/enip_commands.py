@@ -18,18 +18,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-from struct import pack
-
 from scapy.all import Packet, LEIntField, LEShortField, PacketListField, bind_layers
 
+from scapy_enip.enip_constants import commands
 from scapy_enip.enip import Enip
 from scapy_enip.enip_cpf import CpfItem
 import scapy_cip_enip_common.utils as utils
 
 
 class EnipSendUnitData(Packet):
-    """Data in ENIP header specific to the specified command"""
-    name = "EnipSendUnitData"
+    enip_command_id = 0x70
+    name = commands[enip_command_id]
     fields_desc = [
         LEIntField("interface_handle", 0),
         LEShortField("timeout", 0),
@@ -39,18 +38,20 @@ class EnipSendUnitData(Packet):
 
 
 class EnipSendRRData(Packet):
-    name = "EnipSendRRData"
+    enip_command_id = 0x6F
+    name = commands[enip_command_id]
     fields_desc = EnipSendUnitData.fields_desc
 
 
 class EnipRegisterSession(Packet):
-    name = "EnipRegisterSession"
+    enip_command_id = 0x65
+    name = commands[enip_command_id]
     fields_desc = [
         LEShortField("protocol_version", 1),
         LEShortField("options", 0),
     ]
 
 
-bind_layers(Enip, EnipRegisterSession, command_id=0x0065)
-bind_layers(Enip, EnipSendRRData, command_id=0x006f)
-bind_layers(Enip, EnipSendUnitData, command_id=0x0070)
+bind_layers(Enip, EnipRegisterSession, command_id=EnipRegisterSession.enip_command_id)
+bind_layers(Enip, EnipSendRRData, command_id=EnipSendRRData.enip_command_id)
+bind_layers(Enip, EnipSendUnitData, command_id=EnipSendUnitData.enip_command_id)

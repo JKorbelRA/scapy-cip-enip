@@ -27,17 +27,20 @@ from scapy_enip.enip_constants import cpf_item_ids
 
 
 class CpfConnectionAddress(Packet):
-    name = "CpfConnectionAddress"
+    cpf_type_id = 0xa1
+    name = cpf_item_ids[cpf_type_id]
     fields_desc = [LEIntField("connection_id", 0)]
 
 
 class CpfConnectedTransportPacket(Packet):
-    name = "CpfConnectedTransportPacket"
+    cpf_type_id = 0xb1
+    name = cpf_item_ids[cpf_type_id]
     fields_desc = [LEShortField("sequence", 0)]
 
 
 class CpfSequencedAddress(Packet):
-    name = "CpfSequencedAddress"
+    cpf_type_id = 0x8002
+    name = cpf_item_ids[cpf_type_id]
     fields_desc = [
         LEIntField("connection_id", 0),
         LEIntField("sequence_number", 0),
@@ -60,6 +63,6 @@ class CpfItem(Packet):
         return p + pay
 
 
-bind_layers(CpfItem, CpfConnectionAddress, type_id=0x00a1)
-bind_layers(CpfItem, CpfConnectedTransportPacket, type_id=0x00b1)
-bind_layers(CpfItem, CpfSequencedAddress, type_id=0x8002)
+bind_layers(CpfItem, CpfConnectionAddress, type_id=CpfConnectionAddress.cpf_type_id)
+bind_layers(CpfItem, CpfConnectedTransportPacket, type_id=CpfConnectedTransportPacket.cpf_type_id)
+bind_layers(CpfItem, CpfSequencedAddress, type_id=CpfConnectedTransportPacket.cpf_type_id)

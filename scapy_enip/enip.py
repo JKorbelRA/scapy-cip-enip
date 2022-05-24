@@ -27,6 +27,9 @@ from scapy_enip.enip_constants import commands, statuses
 from scapy_cip_enip_common.test_utils import AssertRaises
 
 
+ETHERNET_INDUSTRIAL_PROTO_PORT_NO = 44818
+
+
 class Enip(Packet):
     """Ethernet/IP packet"""
     name = "Ethernet Industrial Protocol"
@@ -105,10 +108,10 @@ def run_tests(verbose: bool = True):
         Enip(status="UndefinedStatusConstant")
 
 
-bind_layers(TCP, Enip, dport=44818)
-bind_layers(TCP, Enip, sport=44818)
-bind_layers(UDP, Enip, dport=44818)
-bind_layers(UDP, Enip, sport=44818)
+bind_layers(TCP, Enip, dport=ETHERNET_INDUSTRIAL_PROTO_PORT_NO)
+bind_layers(TCP, Enip, sport=ETHERNET_INDUSTRIAL_PROTO_PORT_NO)
+bind_layers(UDP, Enip, dport=ETHERNET_INDUSTRIAL_PROTO_PORT_NO)
+bind_layers(UDP, Enip, sport=ETHERNET_INDUSTRIAL_PROTO_PORT_NO)
 
 
 if __name__ == '__main__':
