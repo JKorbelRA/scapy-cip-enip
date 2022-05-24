@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 # Copyright (c) 2015 David I. Urbina, david.urbina@utdallas.edu
 #
@@ -22,31 +21,49 @@
 """Ethernet/IP Common Packet Format Scapy dissector."""
 import struct
 
-from scapy import all as scapy_all
+from scapy.all import Packet, LEIntField, LEShortEnumField, LEShortField, bind_layers
 
-import utils
+from scapy_enip.enip_constants import cpf_item_ids
 
 
-class CPF_SequencedAddressItem(scapy_all.Packet):
-    name = "CPF_SequencedAddressItem"
+class CpfNullAddress(Packet):
+    cpf_type_id = 0x00
+    name = cpf_item_ids[cpf_type_id]
+    fields_desc = []
+
+
+class CpfConnectionAddress(Packet):
+    cpf_type_id = 0xa1
+    name = cpf_item_ids[cpf_type_id]
+    fields_desc = [LEIntField("connection_id", 0)]
+
+
+class CpfSequencedAddress(Packet):
+    cpf_type_id = 0x8002
+    name = cpf_item_ids[cpf_type_id]
     fields_desc = [
-        scapy_all.LEIntField("connection_id", 0),
-        scapy_all.LEIntField("sequence_number", 0),
+        LEIntField("connection_id", 0),
+        LEIntField("sequence_number", 0),
     ]
 
 
-class CPF_AddressDataItem(scapy_all.Packet):
-    name = "CPF_AddressDataItem"
+class CpfUnconnectedData(Packet):
+    cpf_type_id = 0xb2
+    name = cpf_item_ids[cpf_type_id]
+    fields_desc = []
+
+
+class CpfConnectedData(Packet):
+    cpf_type_id = 0xb1
+    name = cpf_item_ids[cpf_type_id]
+    fields_desc = []
+
+
+class CpfItem(Packet):
+    name = "CpfItem"
     fields_desc = [
-        scapy_all.LEShortEnumField('type_id', 0, {
-            0x0000: "Null Address",
-            0x00a1: "Connection-based Address",
-            0x00b1: "Connected Transport Packet",
-            0x00b2: "Unconnected Message",
-            0x0100: "ListServices response",
-            0x8002: 'Sequenced Address Item',
-        }),
-        scapy_all.LEShortField("length", None),
+        LEShortEnumField('type_id', 0, cpf_item_ids),
+        LEShortField("length", None),
     ]
 
     def extract_padding(self, p):
@@ -54,21 +71,12 @@ class CPF_AddressDataItem(scapy_all.Packet):
 
     def post_build(self, p, pay):
         if self.length is None and pay:
-            l = len(pay)
-            p = p[:2] + struct.pack("<H", l) + p[4:]
+            p = p[:2] + struct.pack("<H", len(pay)) + p[4:]
         return p + pay
 
 
-class ENIP_CPF(scapy_all.Packet):
-    name = "ENIP_CPF"
-    fields_desc = [
-        utils.LEShortLenField("count", 2, count_of="items"),
-        scapy_all.PacketListField("items", [CPF_AddressDataItem('', 0, 0), CPF_AddressDataItem('', 0, 0)],
-                                  CPF_AddressDataItem, count_from=lambda p: p.count),
-    ]
-
-    def extract_padding(self, p):
-        return '', p
-
-
-scapy_all.bind_layers(CPF_AddressDataItem, CPF_SequencedAddressItem, type_id=0x8002)
+bind_layers(CpfItem, CpfNullAddress, type_id=CpfNullAddress.cpf_type_id)
+bind_layers(CpfItem, CpfConnectionAddress, type_id=CpfConnectionAddress.cpf_type_id)
+bind_layers(CpfItem, CpfSequencedAddress, type_id=CpfSequencedAddress.cpf_type_id)
+bind_layers(CpfItem, CpfUnconnectedData, type_id=CpfUnconnectedData.cpf_type_id)
+bind_layers(CpfItem, CpfConnectedData, type_id=CpfConnectedData.cpf_type_id)
