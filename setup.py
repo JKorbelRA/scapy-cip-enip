@@ -10,6 +10,7 @@ from setuptools import setup
 setup(
     name='scapy-cip-enip',
     version='0.0.1',
-    packages=['scapy_enip',
+    packages=['scapy_cip',
+              'scapy_enip',
               'scapy_cip_enip_common', ],
     install_requires=["hexdump"])
